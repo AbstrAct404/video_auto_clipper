@@ -29,6 +29,7 @@ from .media import (
     sample_gray_frames,
     sample_gray_frames_batch,
 )
+from .models import TitlePreviewRequest, TitlePreviewResponse
 from .models import (
     NarrativeMatchItem,
     NarrativePlanRequest,
@@ -68,6 +69,7 @@ from .models import (
 from .motion_service import analyze_motion
 from .narrative import NarrativeTargetBook, match_targets, plan_narrative
 from .storyboard import extract_storyboard
+from .titler import TitleContext, generate_titles, product_filename
 from .platform_profiles import PlatformProfiles
 from .signals import compute_signals
 from .style_profiles import RuleBook, RuleBookError, match_profiles
@@ -710,4 +712,40 @@ def narrative_plan_route(request: Request, body: NarrativePlanRequest):
             sum(item["end_seconds"] - item["start_seconds"] for item in segments), 3
         ),
         notes=notes,
+    )
+
+@router.post("/v1/titles/preview", response_model=TitlePreviewResponse)
+def title_preview(body: TitlePreviewRequest, request: Request) -> TitlePreviewResponse:
+    """成片标题预览：分镜→目标命中→风格标题模板，产出可发布的剪辑名。"""
+    book = _narrative_book(request)
+    settings = _settings(request)
+    character_actions: tuple[tuple[str, str], ...] = ()
+    if body.character_actions:
+        for item in body.character_actions:
+            if "subject" not in item or "action" not in item:
+                raise HTTPException(status_code=400, detail="character_actions items need subject/action")
+        character_actions = tuple(
+            (item["subject"], item["action"]) for item in body.character_actions
+        )
+    try:
+        _info, shots = extract_storyboard(settings, body.video_path)
+        matches = match_targets(book, shots, style_id=body.style_id)
+    except MediaError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    target_ids = sorted({match.target_id for match in matches[:8]})
+    context = TitleContext(
+        style_hint=body.style_id,
+        target_ids=tuple(target_ids),
+        character_actions=character_actions,
+        duration_seconds=body.target_duration_seconds,
+        peak_motion=max((shot.peak_motion_intensity for shot in shots), default=0.0),
+    )
+    titles = generate_titles(context)
+    return TitlePreviewResponse(
+        video_path=body.video_path,
+        style_id=body.style_id,
+        recommended=titles[0],
+        candidates=titles,
+        matched_target_ids=target_ids,
+        filename=product_filename(titles[0], set()),
     )

@@ -269,6 +269,22 @@ block > review > pass；未知维度/缺失标签忽略并记 notes，绝不因�
 - 混剪片段保持各自在原片内的完整、同一镜头不重复使用；目标配置加载
   失败仅叙事路由降级 503，不影响其余能力。
 
+### 成品自动命名（`titler.py`）
+
+`POST /v1/jobs` 不传 `output_name` 时，成片文件名自动生成为可直接发布
+的剪辑标题（不再是 job_id 乱码）：
+
+- **模板库**按风格分池（燃向/战斗特效/日常反转/恋爱甜向/快节奏对白/
+  群像人物-行动/通用兜底），套路参考公开爆款标题规律（黄金 3 秒钩子、
+  悬念问句、「【标签】描述」分区前缀、对话引用开场）；
+- **确定性生成**：池路由（风格 hint → 命中目标 → 人物-行动线索 → 兜底）
+  + 长度甜点区/钩子符号/人物名加权打分，同输入永远得到同一标题；
+- **人物-行动槽位**：L2 `narrative_board` 标注或人工提供
+  `character_actions` 时注入（如「宙斯出手的瞬间，全场安静了」）；
+- 文件名做平台安全净化（去路径分隔符/Windows 保留字）+ 重名自动加序号；
+  任务详情回显 `title` 与备选 `result.title_candidates`；
+  `POST /v1/titles/preview` 可在剪辑前独立预览推荐标题。
+
 ### 启动降级策略
 
 `main.py` 启动时依次加载规则书、平台画像与叙事目标书：任一失败仅记 error
@@ -299,6 +315,7 @@ block > review > pass；未知维度/缺失标签忽略并记 notes，绝不因�
 | `GET /v1/narrative` | 叙事目标/模板清单摘要（风格→画面对应关系的权威来源） |
 | `POST /v1/storyboard/extract` | 分镜捕捉：全片切点分镜 + 逐镜运动/亮度信号 |
 | `POST /v1/narrative/plan` | 叙事剪辑计划：目标匹配 + 模板重排（混剪/人物-行动交错） |
+| `POST /v1/titles/preview` | 成片标题预览：分镜→目标命中→爆款标题模板，产出可发布的剪辑名 |
 
 ## 环境变量
 
@@ -393,9 +410,10 @@ python3 -m pytest          # 115 个用例：纯逻辑 + TestClient 端到端（
   结果解读口径与错误处理表；
 - `smartclip_call.py`：零依赖（仅 Python 标准库）调用脚本，支持
   `run / signals / dedup / templates / storyboard / narrative / platforms / jobs / status`
-  九个子命令；`templates` 输出各视频类型的剪辑模板倾向（目标时长/prefer
+  十个子命令；`templates` 输出各视频类型的剪辑模板倾向（目标时长/prefer
   倾向/钩子偏好），`storyboard` 输出镜头级分镜信号，`narrative` 输出
-  风格→画面匹配与混剪时间轴（支持 `--interleave` 人物-行动交错）；
+  风格→画面匹配与混剪时间轴（支持 `--interleave` 人物-行动交错），
+  `title` 预览可发布的成片标题（`run` 不传 output_name 时成品自动同名）；
 - 服务地址由环境变量 `SMARTCLIP_BASE_URL` 指定（默认 `http://127.0.0.1:8010`），
   对本地与部署环境通用；已按 SKILL.md 全流程实测跑通（一键成片 → 成片下载 200）。
 
@@ -419,6 +437,7 @@ app/
 ├── clip_executor.py   # L3 渲染执行器（ffmpeg 拼接成片）
 ├── l2_service.py      # L2 云端 LLM 复核（OpenAI-compatible，可选）
 ├── storyboard.py      # 分镜捕捉（切点分镜 + 逐镜采样信号）
+├── titler.py          # 成品自动命名（风格标题模板库 + 文件名净化）
 ├── narrative.py       # 叙事目标匹配 + 模板重排（混剪/交错）
 ├── cli.py             # smartclip CLI（serve/run/status/watch/jobs）
 ├── static/index.html  # Web 控制台页面

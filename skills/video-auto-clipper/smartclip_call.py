@@ -139,6 +139,29 @@ def cmd_narrative(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_title(args: argparse.Namespace) -> int:
+    """成片标题预览：风格→画面命中 → 可直接发布的剪辑名（成品自动同名）。"""
+    body = {
+        "video_path": args.video_path,
+        "target_duration_seconds": args.duration,
+    }
+    if args.style:
+        body["style_id"] = args.style
+    if args.character:
+        body["character_actions"] = [
+            {"subject": subject, "action": action}
+            for subject, action in (pair.split(":", 1) for pair in args.character)
+        ]
+    data = _api("POST", "/v1/titles/preview", body, timeout=300)
+    print(f"推荐标题：{data['recommended']}")
+    print(f"建议文件名：{data['filename']}")
+    print(f"命中画面目标：{'、'.join(data['matched_target_ids']) or '无'}")
+    print("备选标题：")
+    for title in data["candidates"]:
+        print(f"  - {title}")
+    return 0
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     job = _api(
         "POST",
@@ -160,7 +183,9 @@ def cmd_run(args: argparse.Namespace) -> int:
         if status in {"completed", "failed", "cancelled"}:
             _dump(detail)
             if status == "completed":
-                print(f"\n成片地址：{BASE}/v1/jobs/{job_id}/product", file=sys.stderr)
+                if detail.get("title"):
+                    print(f"\n成片标题：{detail['title']}", file=sys.stderr)
+                print(f"成片地址：{BASE}/v1/jobs/{job_id}/product", file=sys.stderr)
             return 0 if status == "completed" else 1
         time.sleep(3)
     raise SystemExit(f"等待超时（{args.timeout}s），可用 status {job_id} 继续查询")
@@ -202,6 +227,17 @@ def main(argv: list[str] | None = None) -> int:
     narrative.add_argument("--frames-per-shot", type=int, default=3)
     narrative.add_argument("--interleave", action="store_true", help="人物-行动交错（群像混剪）")
 
+    title = sub.add_parser("title", help="成片标题预览（可发布的剪辑名）")
+    title.add_argument("video_path")
+    title.add_argument("--style", help="风格 id（如 ran_xiang）")
+    title.add_argument("--duration", type=float, default=15)
+    title.add_argument(
+        "--character",
+        action="append",
+        metavar="人物:行动",
+        help="人物-行动线索（可多次，如 宙斯:释放闪电），来自 L2 标注或人工提供",
+    )
+
     sub.add_parser("platforms", help="平台画像")
     sub.add_parser("jobs", help="任务列表")
 
@@ -221,6 +257,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_storyboard(args)
     if args.command == "narrative":
         return cmd_narrative(args)
+    if args.command == "title":
+        return cmd_title(args)
     if args.command == "signals":
         _dump(_api("POST", "/v1/signals/compute", {"video_path": args.video_path}))
         return 0

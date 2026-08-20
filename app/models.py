@@ -297,6 +297,7 @@ class JobSummary(StrictModel):
     updated_at: str
     output_path: str | None = None
     error: str | None = None
+    title: str | None = None
 
 
 class JobDetail(JobSummary):
@@ -419,3 +420,21 @@ class NarrativePlanResponse(StrictModel):
     segments: list[NarrativeSegment] = Field(default_factory=list)
     total_duration_seconds: float = 0.0
     notes: list[str] = Field(default_factory=list)
+
+
+class TitlePreviewRequest(StrictModel):
+    video_path: str = Field(min_length=1)
+    style_id: str | None = Field(default=None, max_length=40)
+    target_duration_seconds: float = Field(default=15.0, gt=0, le=60)
+    # L2 narrative_board 标注的人物-行动线索（可选，注入个性化标题）
+    character_actions: list[dict[str, str]] | None = Field(default=None, max_length=4)
+
+
+class TitlePreviewResponse(StrictModel):
+    schema_version: str = "title-preview-1.0"
+    video_path: str
+    style_id: str | None
+    recommended: str
+    candidates: list[str] = Field(default_factory=list)
+    matched_target_ids: list[str] = Field(default_factory=list)
+    filename: str

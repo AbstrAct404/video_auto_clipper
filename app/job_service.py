@@ -20,6 +20,7 @@ from .media import extract_jpeg_data_url
 from .models import CandidateWindow, ClipSegment, CreateJobRequest, JobDetail, JobSummary, SignalsRequest
 from .signals import compute_signals
 from .style_profiles import RuleBook, match_profiles
+from .titler import TitleContext, generate_titles, product_filename
 
 
 TERMINAL = {"completed", "failed", "cancelled"}
@@ -161,7 +162,28 @@ class JobStore:
             if not segments:
                 raise RuntimeError("L0 produced no renderable candidate windows")
             clip_segments = [ClipSegment(**segment) for segment in segments]
-            output_name = _safe_name(request.output_name or f"{job_id}.mp4")
+            if request.output_name:
+                output_name = _safe_name(request.output_name)
+                record["result"]["title"] = Path(output_name).stem
+            else:
+                # 成品自动命名：风格线索 + L0 信号 → 可直接发布的剪辑标题
+                style_hint = None
+                if request.profile_ids:
+                    style_hint = request.profile_ids[0]
+                elif review.get("profiles"):
+                    style_hint = review["profiles"][0]["profile_id"]
+                context = TitleContext(
+                    style_hint=style_hint,
+                    duration_seconds=request.target_duration_seconds,
+                    peak_motion=signals_response.signals.peak_motion_intensity,
+                    audio_energy=float(signals_response.signals.audio_mean_volume_db or 0.0),
+                )
+                titles = generate_titles(context)
+                record["result"]["title"] = titles[0]
+                record["result"]["title_candidates"] = titles
+                existing = {path.name for path in self.root.glob("*.mp4")}
+                output_name = product_filename(titles[0], existing)
+            record["title"] = record["result"].get("title")
             output = self.root / output_name
             render_segments(
                 self.settings,

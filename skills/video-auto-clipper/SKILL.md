@@ -21,6 +21,7 @@ description: >
 - 「燃向/伤感/对白类视频怎么剪」「剪辑模板是什么」→ **剪辑模板倾向**
 - 「先看看有哪些镜头/分镜」「捕捉更多画面」→ **分镜捕捉**
 - 「日常→波澜起伏、战斗→特效这类对应画面」「人物行动交替混剪」「打乱顺序先放高潮」→ **叙事剪辑计划**
+- 「给成片起个标题」「取个能直接发布的名字」→ **成品自动命名 / 标题预览**
 - 「分析这个视频的节奏/运动/信号」→ **L0 信号分析**
 - 「会不会被判搬运/重复」「发布前查重」→ **降重检测**
 - 「B 站/抖音/小红书发什么分区」「竖屏还是横屏、最长多少秒」→ **平台画像**
@@ -137,6 +138,29 @@ chatbot 使用约定：
 3. `notes` 会标注降级/近似情况（如 contrast_open 无对比对回退 peak_first）；
 4. 人物/行动等语义由本地时间段近似，正式交错需 L2（`prompts/narrative_board.md`）确认，回复用户时需说明。
 
+## 成品自动命名（可直接发布的剪辑标题）
+
+`POST /v1/jobs` 不传 `output_name` 时，成片文件名自动生成为有吸引力的
+发布标题（如「这爆发力直接封神！.mp4」），依据风格命中 + L0 信号从爆款
+标题模板库（黄金 3 秒钩子/悬念问句/【标签】前缀/人物-行动句式）确定性
+选取；`output_name` 显式给出时仍以用户为准。任务详情含 `title` 与
+`result.title_candidates` 备选。发布前可先预览：
+
+```bash
+# 标题预览：分镜→画面目标命中→风格标题（style_id 可选；人物-行动线索可选）
+curl -s -X POST "$BASE/v1/titles/preview" -H 'Content-Type: application/json' \
+  -d '{"video_path": "<绝对路径>", "style_id": "ran_xiang",
+       "character_actions": [{"subject": "宙斯", "action": "释放闪电"}]}'
+# → recommended（推荐）/ candidates（备选）/ filename（建议文件名）
+```
+
+约定：
+
+1. 标题为本地确定性生成（同输入同输出），无需联网；`character_actions`
+   来自 L2 `narrative_board` 标注或用户提供，可显著提升个性化（含人物名）；
+2. 文件名已做平台安全净化（去路径分隔符/保留字），可直接用于发布；
+3. 回复用户时给出推荐标题 + 2 条备选供挑选，不要只给一条。
+
 ## 能力二：单步分析（轻量问答场景）
 
 ```bash
@@ -203,6 +227,8 @@ python3 skills/video-auto-clipper/smartclip_call.py templates                 # 
 python3 skills/video-auto-clipper/smartclip_call.py storyboard <视频绝对路径>  # 分镜捕捉
 python3 skills/video-auto-clipper/smartclip_call.py narrative <视频绝对路径> \
   --style ran_xiang --template hook_first --interleave                         # 叙事混剪计划
+python3 skills/video-auto-clipper/smartclip_call.py title <视频绝对路径> \
+  --style ran_xiang --character 宙斯:释放闪电                                  # 成片标题预览
 python3 skills/video-auto-clipper/smartclip_call.py platforms                 # 平台画像
 python3 skills/video-auto-clipper/smartclip_call.py jobs                      # 任务列表
 ```
