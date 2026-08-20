@@ -363,7 +363,8 @@ python3 -m pytest          # 81 个用例：纯逻辑 + TestClient 端到端（�
   含触发意图识别、前置探活、三大能力（一键成片 jobs / 单步分析 / 任务管理）、
   结果解读口径与错误处理表；
 - `smartclip_call.py`：零依赖（仅 Python 标准库）调用脚本，支持
-  `run / signals / dedup / platforms / jobs / status` 六个子命令；
+  `run / signals / dedup / templates / platforms / jobs / status` 七个子命令；
+  `templates` 输出各视频类型的剪辑模板倾向（目标时长/prefer 倾向/钩子偏好）；
 - 服务地址由环境变量 `SMARTCLIP_BASE_URL` 指定（默认 `http://127.0.0.1:8010`），
   对本地与部署环境通用；已按 SKILL.md 全流程实测跑通（一键成片 → 成片下载 200）。
 
