@@ -1,0 +1,101 @@
+# 叙事剪辑目标与模板（v0.1，provisional）
+# 设计依据：剪辑前先捕捉分镜 → 判断整体风格 → 按风格寻找目标画面 →
+# 叙事模板允许打乱时间顺序混剪（事件->结果 / 事件->转折 等钩子前置结构）。
+# 阈值口径沿用 SignalValues（signals-1.0），但作用于镜头级信号，样本标定前
+# 只允许试运行，不允许生产判定。
+
+schema_version: narrative-targets-1.0
+
+calibration:
+  status: provisional
+  sample_count: 1          # 仅 ZEUS 一支实测；扩到 30+ 支前不得 calibrated
+  calibrated_at: "2026-08-21"
+
+# 镜头级信号白名单（storyboard 输出字段）
+shot_signal_schema:
+  fields:
+    - duration_seconds
+    - mean_motion_intensity
+    - peak_motion_intensity
+    - luminance_spike_ratio
+    - luminance_delta_max
+
+targets:
+  - id: battle_effects
+    display_name: 战斗-夸张特效
+    styles: [ran_xiang]
+    description: 高运动 + 亮度剧烈变化（雷电/爆炸/光效），如宙斯释放雷电
+    match: all
+    conditions:
+      - { signal: mean_motion_intensity, op: gte, value: 0.30 }
+      - { signal: luminance_spike_ratio, op: gte, value: 0.10 }
+
+  - id: blood_intensity
+    display_name: 战斗-血液冲击
+    styles: [ran_xiang]
+    description: 色彩冲击强烈的瞬间（本地只能测亮度突变，血色判定交 L2）
+    match: all
+    conditions:
+      - { signal: luminance_delta_max, op: gte, value: 0.25 }
+    l2_hint: prompts/narrative_board.md
+
+  - id: romance_intimacy
+    display_name: 恋爱-亲密动作
+    styles: [fast_dialogue]
+    description: 低运动稳定镜头（拥抱/牵手/对视）；亲密语义需 L2 确认
+    match: all
+    conditions:
+      - { signal: mean_motion_intensity, op: lte, value: 0.18 }
+      - { signal: duration_seconds, op: gte, value: 1.0 }
+    l2_hint: prompts/narrative_board.md
+
+  - id: daily_turbulence
+    display_name: 日常-波澜起伏
+    styles: [fast_dialogue, ran_xiang]
+    description: 平静镜头紧接剧烈镜头的对比转场（铺垫->爆发）
+    match: pair          # 作用于相邻镜头对：first 静 -> second 动
+    pair_conditions:
+      first:
+        - { signal: mean_motion_intensity, op: lte, value: 0.15 }
+      second:
+        - { signal: mean_motion_intensity, op: gte, value: 0.30 }
+    pair_gap_seconds: 0.5
+
+  - id: group_action
+    display_name: 群像-人物行动
+    styles: [ran_xiang, fast_dialogue]
+    description: 中高强度动作镜头，供「人物->行动」交错剪辑（本地粗筛，
+      人物/行动语义由 L2 narrative_board prompt 标注）
+    match: all
+    conditions:
+      - { signal: mean_motion_intensity, op: gte, value: 0.20 }
+      - { signal: duration_seconds, op: gte, value: 0.8 }
+    l2_hint: prompts/narrative_board.md
+
+# 叙事模板：定义镜头的「重排策略」，输出可混剪的时间轴
+templates:
+  - id: linear
+    display_name: 顺序叙事
+    description: 保持原片时间顺序（事件->铺垫->转折->结果）
+    strategy: chronological
+
+  - id: hook_first
+    display_name: 钩子前置
+    description: 目标镜头中强度最高者置顶（结果/高潮->再回溯事件），吸引点击
+    strategy: peak_first
+
+  - id: climax_first
+    display_name: 事件->结果
+    description: 高潮镜头开场，随后按时间补因（观众带着结果看过程）
+    strategy: peak_first
+
+  - id: twist_bridge
+    display_name: 事件->转折
+    description: 平静镜头开场立刻切对比转场（平静->爆发），制造落差钩子
+    strategy: contrast_open
+
+# 人物-行动交错（群像剪辑：宙斯->放闪电，切 jimmy->教扫码，再切下一位）
+interleave:
+  enabled: true
+  max_pairs: 3           # 一期最多交错 3 组人物-行动
+  min_pair_seconds: 1.0  # 每组最短呈现时长

@@ -30,6 +30,13 @@ from .media import (
     sample_gray_frames_batch,
 )
 from .models import (
+    NarrativeMatchItem,
+    NarrativePlanRequest,
+    NarrativePlanResponse,
+    NarrativeSegment,
+    ShotInfo,
+    StoryboardRequest,
+    StoryboardResponse,
     ClipPlanRequest,
     ClipPlanResponse,
     ClipRenderRequest,
@@ -59,6 +66,8 @@ from .models import (
     VisualEvidenceItem,
 )
 from .motion_service import analyze_motion
+from .narrative import NarrativeTargetBook, match_targets, plan_narrative
+from .storyboard import extract_storyboard
 from .platform_profiles import PlatformProfiles
 from .signals import compute_signals
 from .style_profiles import RuleBook, RuleBookError, match_profiles
@@ -100,6 +109,19 @@ def _job_store(request: Request) -> JobStore:
     return request.app.state.job_store
 
 
+def _narrative_book(request: Request) -> NarrativeTargetBook:
+    book = getattr(request.app.state, "narrative_book", None)
+    if book is None:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "narrative targets not loaded; check SMARTCLIP_NARRATIVE_TARGETS "
+                "and startup logs"
+            ),
+        )
+    return book
+
+
 def _ensure_video(video_path: str) -> None:
     path = Path(video_path)
     if not path.is_file():
@@ -129,6 +151,7 @@ def ready(request: Request) -> dict[str, object]:
             "l2_review": bool(settings.l2_enabled and settings.l2_api_key and settings.l2_base_url),
             "platforms": getattr(request.app.state, "platform_profiles", None) is not None,
             "dedup": getattr(request.app.state, "platform_profiles", None) is not None,
+            "narrative": getattr(request.app.state, "narrative_book", None) is not None,
         },
     }
 
@@ -557,3 +580,134 @@ def dedup_compare_route(request: Request, body: DedupCompareRequest):
         )
     except MediaError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+# ---------- 分镜捕捉 / 叙事剪辑 ----------
+
+
+@router.get("/v1/narrative")
+def narrative_book_summary(request: Request) -> dict[str, object]:
+    """叙事目标与模板摘要：风格→画面目标 + 混剪模板 + 标定状态。"""
+    book = _narrative_book(request)
+    return {
+        "schema_version": book.schema_version,
+        "calibration_status": book.calibration_status,
+        "source_path": book.source_path,
+        "targets": [
+            {
+                "target_id": target.target_id,
+                "display_name": target.display_name,
+                "styles": list(target.styles),
+                "description": target.description,
+                "match": target.match,
+                "l2_hint": target.l2_hint,
+            }
+            for target in book.targets
+        ],
+        "templates": [
+            {
+                "template_id": template.template_id,
+                "display_name": template.display_name,
+                "description": template.description,
+                "strategy": template.strategy,
+            }
+            for template in book.templates
+        ],
+        "interleave": {
+            "enabled": book.interleave.enabled,
+            "max_pairs": book.interleave.max_pairs,
+            "min_pair_seconds": book.interleave.min_pair_seconds,
+        },
+    }
+
+
+@router.post("/v1/storyboard/extract", response_model=StoryboardResponse)
+def storyboard_extract_route(request: Request, body: StoryboardRequest):
+    """剪辑前分镜捕捉：切点分镜 + 逐镜多帧采样 + 镜头级运动/亮度信号。"""
+    settings = _settings(request)
+    _ensure_video(body.video_path)
+    try:
+        info, shots = extract_storyboard(
+            settings,
+            body.video_path,
+            frames_per_shot=body.frames_per_shot,
+            max_frames=body.max_frames,
+            scene_threshold=body.scene_threshold,
+        )
+    except MediaError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return StoryboardResponse(
+        video_path=body.video_path,
+        duration_seconds=info.duration_seconds,
+        shot_count=len(shots),
+        shots=[
+            ShotInfo(
+                index=shot.index,
+                start_seconds=shot.start_seconds,
+                end_seconds=shot.end_seconds,
+                duration_seconds=shot.duration_seconds,
+                sampled_frames=shot.sampled_frames,
+                mean_motion_intensity=shot.mean_motion_intensity,
+                peak_motion_intensity=shot.peak_motion_intensity,
+                luminance_spike_ratio=shot.luminance_spike_ratio,
+                luminance_delta_max=shot.luminance_delta_max,
+            )
+            for shot in shots
+        ],
+    )
+
+
+@router.post("/v1/narrative/plan", response_model=NarrativePlanResponse)
+def narrative_plan_route(request: Request, body: NarrativePlanRequest):
+    """叙事剪辑计划：分镜 → 风格目标匹配 → 模板重排（可混剪、可人物-行动交错）。
+
+    style_id 可选：给定后只评估归属该风格的目标；建议先跑
+    /v1/signals/compute + /v1/profiles/evaluate 判断整体风格再传入。
+    """
+    settings = _settings(request)
+    book = _narrative_book(request)
+    _ensure_video(body.video_path)
+    try:
+        info, shots = extract_storyboard(
+            settings,
+            body.video_path,
+            frames_per_shot=body.frames_per_shot,
+            max_frames=body.max_frames,
+        )
+        matches = match_targets(book, shots, style_id=body.style_id)
+        segments, notes = plan_narrative(
+            book,
+            matches,
+            body.template_id,
+            target_duration_seconds=body.target_duration_seconds,
+            interleave=body.interleave,
+        )
+    except MediaError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return NarrativePlanResponse(
+        video_path=body.video_path,
+        style_id=body.style_id,
+        template_id=body.template_id,
+        calibration_status=book.calibration_status,
+        shot_count=len(shots),
+        matches=[
+            NarrativeMatchItem(
+                target_id=match.target_id,
+                kind=match.kind,
+                shot_indexes=list(match.shot_indexes),
+                start_seconds=match.start_seconds,
+                end_seconds=match.end_seconds,
+                score=match.score,
+            )
+            for match in matches[:64]
+        ],
+        segments=[NarrativeSegment(**segment) for segment in segments],
+        total_duration_seconds=round(
+            sum(item["end_seconds"] - item["start_seconds"] for item in segments), 3
+        ),
+        notes=notes,
+    )

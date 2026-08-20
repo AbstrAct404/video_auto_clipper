@@ -253,11 +253,27 @@ block > review > pass；未知维度/缺失标签忽略并记 notes，绝不因�
 - 加载器同样严格校验：schema 版本、类目 id 唯一、四个必备阈值齐全且
   review < block，违反即启动降级。
 
+### 分镜捕捉与叙事剪辑（`storyboard.py` + `narrative.py`）
+
+剪辑前先捕捉更多画面，再按「风格→画面目标」匹配与混剪：
+
+- **分镜捕捉**：ffmpeg scene 全片切点 → 镜头切分（过滤 ≤0.05s 碎片）→
+  每镜均匀多帧采样（单次批量解码、帧预算自适应）→ 镜头级运动/亮度信号；
+- **目标匹配**：`configs/narrative_targets.yaml` 定义风格→画面目标
+  （日常→波澜起伏对比对、战斗→夸张特效/血液冲击、恋爱→亲密动作、
+  群像→人物-行动），可按 `style_id` 只评估归属该风格的目标；
+- **叙事模板（混剪）**：linear 顺叙 / peak_first 高潮置顶（事件→结果）/
+  contrast_open 对比开场（事件→转折），均带目标时长预算裁剪；
+  `interleave` 做群像人物-行动交错（本地以时间段近似，人物/行动语义
+  标注交 L2 `prompts/narrative_board.md` 确认）；
+- 混剪片段保持各自在原片内的完整、同一镜头不重复使用；目标配置加载
+  失败仅叙事路由降级 503，不影响其余能力。
+
 ### 启动降级策略
 
-`main.py` 启动时依次加载规则书与平台画像：任一失败仅记 error 日志并将对应
-`app.state` 置 None，相关路由返回 503（提示检查对应环境变量），L0 分析、
-L3 剪辑计划等纯计算能力不受影响。
+`main.py` 启动时依次加载规则书、平台画像与叙事目标书：任一失败仅记 error
+日志并将对应 `app.state` 置 None，相关路由返回 503（提示检查对应环境
+变量），L0 分析、L3 剪辑计划、分镜捕捉等纯计算能力不受影响。
 
 ## HTTP 路由
 
@@ -267,13 +283,22 @@ L3 剪辑计划等纯计算能力不受影响。
 | `POST /v1/analyze/motion` | 窗口级运动分析：采样（burst_1s_3fps / window_3s_1fps）+ absdiff + 时序分类（stable/intermittent/continuous/abrupt），阈值口径对齐 Framework |
 | `POST /v1/analyze/visual` | closed-set 视觉分析：受限目录 + 余弦排序 + margin 拒答；内置 `shot_size`/`visual_effect`/`mood` 等风格信号组 |
 | `POST /v1/signals/compute` | L0 信号层：切镜率、运动强度、音频能量、亮度突变比例 + 源信息 |
-| `GET /v1/profiles` | 规则书摘要：标定状态 + 规则卡清单 + 门禁维度 |
+| `GET /v1/profiles` | 规则书摘要：标定状态 + 规则卡清单（含 clip_strategy 剪辑模板倾向）+ 门禁维度 |
 | `POST /v1/profiles/evaluate` | L1 规则卡求值 + L2 移交计划：信号值 → 命中清单与云端复核清单（`production=true` 需规则书已标定，否则 409） |
 | `POST /v1/gatekeeper/check` | L4 合规门禁：维度标签 → block/review/pass 确定性查表 |
 | `POST /v1/clip/plan` | L3 剪辑计划：带分数窗口 → 15s 片段计划（执行器未实现，响应附 `executor_status`） |
 | `GET /v1/platforms` | 平台画像：统一类目→各平台映射（含 B 站官方 tid）+ 发布规格 + 判重规则 |
 | `POST /v1/dedup/analyze` | 降重体检：MD5 + 帧 aHash 指纹 + 残留水印/黑边检测 → pass/review/block |
 | `POST /v1/dedup/compare` | 重复率比对：与参考片（原片/已发布成片）帧指纹相似度 → 判定（≥0.75 review、≥0.90 block） |
+| `POST /v1/jobs` | 一键成片任务（202 + job_id，异步跑 L0→L3 全流程） |
+| `GET /v1/jobs` / `GET /v1/jobs/{job_id}` | 任务列表 / 详情（status/error/片段时间轴） |
+| `GET /v1/jobs/{job_id}/product` | 成片下载（FileResponse） |
+| `POST /v1/jobs/{job_id}/cancel` / `retry` | 取消 / 重试任务 |
+| `POST /v1/clip/render` | L3 渲染执行：片段时间轴 → ffmpeg 拼接成片 |
+| `POST /v1/l2/review` | L2 云端多模态复核（OpenAI-compatible，未启用返回 503） |
+| `GET /v1/narrative` | 叙事目标/模板清单摘要（风格→画面对应关系的权威来源） |
+| `POST /v1/storyboard/extract` | 分镜捕捉：全片切点分镜 + 逐镜运动/亮度信号 |
+| `POST /v1/narrative/plan` | 叙事剪辑计划：目标匹配 + 模板重排（混剪/人物-行动交错） |
 
 ## 环境变量
 
@@ -286,11 +311,15 @@ L3 剪辑计划等纯计算能力不受影响。
 | `SMARTCLIP_VISUAL_FAKE` | 1 | 1=确定性 Fake provider（联调）；0=真实 SigLIP2（需 `pip install .[vision]`） |
 | `SMARTCLIP_RULE_BOOK` | `configs/style_profiles.yaml` | 规则书路径；加载失败时 L1/L2/L4 路由降级为 503，不阻塞 L0 |
 | `SMARTCLIP_PLATFORM_PROFILES` | `configs/platform_profiles.yaml` | 平台画像路径；加载失败时分类/降重路由降级为 503 |
+| `SMARTCLIP_NARRATIVE_TARGETS` | `configs/narrative_targets.yaml` | 叙事剪辑目标与模板；加载失败时叙事路由降级为 503 |
+| `SMARTCLIP_L2_ENABLED` | 0 | L2 云端复核开关（另见 `SMARTCLIP_L2_API_KEY` / `_BASE_URL` / `_MODEL` / `_TIMEOUT_SECONDS`） |
+| `SMARTCLIP_PRODUCTS_DIR` | `products` | 任务服务成片产物目录 |
+| `SMARTCLIP_JOB_WORKERS` | 1 | 任务执行线程数 |
 
 ## 测试
 
 ```bash
-python3 -m pytest          # 81 个用例：纯逻辑 + TestClient 端到端（需 ffmpeg）
+python3 -m pytest          # 115 个用例：纯逻辑 + TestClient 端到端（需 ffmpeg）
 ```
 
 - 端到端 fixture：`tests/conftest.py` 用 ffmpeg 生成确定性 4s 小视频
@@ -363,8 +392,10 @@ python3 -m pytest          # 81 个用例：纯逻辑 + TestClient 端到端（�
   含触发意图识别、前置探活、三大能力（一键成片 jobs / 单步分析 / 任务管理）、
   结果解读口径与错误处理表；
 - `smartclip_call.py`：零依赖（仅 Python 标准库）调用脚本，支持
-  `run / signals / dedup / templates / platforms / jobs / status` 七个子命令；
-  `templates` 输出各视频类型的剪辑模板倾向（目标时长/prefer 倾向/钩子偏好）；
+  `run / signals / dedup / templates / storyboard / narrative / platforms / jobs / status`
+  九个子命令；`templates` 输出各视频类型的剪辑模板倾向（目标时长/prefer
+  倾向/钩子偏好），`storyboard` 输出镜头级分镜信号，`narrative` 输出
+  风格→画面匹配与混剪时间轴（支持 `--interleave` 人物-行动交错）；
 - 服务地址由环境变量 `SMARTCLIP_BASE_URL` 指定（默认 `http://127.0.0.1:8010`），
   对本地与部署环境通用；已按 SKILL.md 全流程实测跑通（一键成片 → 成片下载 200）。
 
@@ -387,14 +418,17 @@ app/
 ├── job_service.py     # 文件持久化异步任务（L0→L3 全流程 + cancel/retry）
 ├── clip_executor.py   # L3 渲染执行器（ffmpeg 拼接成片）
 ├── l2_service.py      # L2 云端 LLM 复核（OpenAI-compatible，可选）
+├── storyboard.py      # 分镜捕捉（切点分镜 + 逐镜采样信号）
+├── narrative.py       # 叙事目标匹配 + 模板重排（混剪/交错）
 ├── cli.py             # smartclip CLI（serve/run/status/watch/jobs）
 ├── static/index.html  # Web 控制台页面
 ├── routes.py          # FastAPI 路由
 └── main.py            # 应用入口（启动时加载配置，失败降级）
 configs/style_profiles.yaml        # 风格规则卡示例（provisional）
 configs/platform_profiles.yaml     # 平台分类 + 判重规则（调研落地）
+configs/narrative_targets.yaml     # 叙事目标与模板（风格→画面 + 混剪，provisional）
 skills/video-auto-clipper/         # chatbot 调用技能（SKILL.md + 零依赖脚本）
-prompts/                           # L2 移交 prompt stub（二期接入云端 LLM）
+prompts/                           # L2 移交 prompt stub（含 narrative_board 人物-行动标注）
 docs/signal-layer-design.md        # 信号层设计（含实测标定记录）
 docs/style-profiles-yaml-design.md # YAML 设计 + 样本集必要性
 docs/platform-taxonomy-and-dedup.md # 平台分类与判重调研

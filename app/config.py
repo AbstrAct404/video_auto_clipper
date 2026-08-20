@@ -35,6 +35,8 @@ class Settings:
     rule_book_path: str = "configs/style_profiles.yaml"
     # 平台画像路径（视频类型划分 + 各平台判重规则）
     platform_profiles_path: str = "configs/platform_profiles.yaml"
+    # 叙事剪辑目标与模板（风格→画面目标 + 混剪叙事模板）
+    narrative_targets_path: str = "configs/narrative_targets.yaml"
     # ffmpeg/ffprobe 可执行文件
     ffmpeg_bin: str = "ffmpeg"
     ffprobe_bin: str = "ffprobe"
@@ -64,6 +66,9 @@ class Settings:
             ),
             platform_profiles_path=os.environ.get(
                 "SMARTCLIP_PLATFORM_PROFILES", "configs/platform_profiles.yaml"
+            ),
+            narrative_targets_path=os.environ.get(
+                "SMARTCLIP_NARRATIVE_TARGETS", "configs/narrative_targets.yaml"
             ),
             l2_enabled=_env_flag("SMARTCLIP_L2_ENABLED", False),
             l2_api_key=os.environ.get("SMARTCLIP_L2_API_KEY"),

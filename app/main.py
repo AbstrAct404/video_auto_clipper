@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import Settings
 from .job_service import JobStore
+from .narrative import NarrativeConfigError, load_narrative_targets
 from .platform_profiles import PlatformProfilesError, load_platform_profiles
 from .routes import router
 from .style_profiles import RuleBookError, load_rule_book
@@ -47,6 +48,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     except PlatformProfilesError as exc:
         logger.error("平台画像加载失败，分类/降重路由不可用：%s", exc)
         app.state.platform_profiles = None
+    # 叙事剪辑目标与模板同样降级不阻塞
+    try:
+        app.state.narrative_book = load_narrative_targets(
+            app.state.settings.narrative_targets_path
+        )
+    except NarrativeConfigError as exc:
+        logger.error("叙事目标加载失败，分镜/叙事路由不可用：%s", exc)
+        app.state.narrative_book = None
     app.state.job_store = JobStore(app.state.settings, app.state.rule_book)
     app.include_router(router, tags=["analysis"])
     static_dir = Path(__file__).parent / "static"

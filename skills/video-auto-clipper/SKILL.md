@@ -2,9 +2,9 @@
 name: video-auto-clipper
 description: >
   北斗智影智能剪辑（video_auto_clipper）能力调用技能。当用户要求一键剪辑、
-  短剧切片、视频筛选、15s 成片、运动/信号分析、降重检测、平台发布规格查询或
-  任务管理时使用。通过 HTTP 调用本地或部署的 smartclip 服务完成，无需本地
-  安装任何依赖。
+  短剧切片、视频筛选、15s 成片、运动/信号分析、降重检测、平台发布规格查询、
+  分镜捕捉/叙事混剪计划或任务管理时使用。通过 HTTP 调用本地或部署的
+  smartclip 服务完成，无需本地安装任何依赖。
 ---
 
 # video_auto_clipper · 智能剪辑技能
@@ -19,6 +19,8 @@ description: >
 
 - 「把这个视频剪成 15 秒」「一键剪辑」「批量切片」→ **一键成片（jobs）**
 - 「燃向/伤感/对白类视频怎么剪」「剪辑模板是什么」→ **剪辑模板倾向**
+- 「先看看有哪些镜头/分镜」「捕捉更多画面」→ **分镜捕捉**
+- 「日常→波澜起伏、战斗→特效这类对应画面」「人物行动交替混剪」「打乱顺序先放高潮」→ **叙事剪辑计划**
 - 「分析这个视频的节奏/运动/信号」→ **L0 信号分析**
 - 「会不会被判搬运/重复」「发布前查重」→ **降重检测**
 - 「B 站/抖音/小红书发什么分区」「竖屏还是横屏、最长多少秒」→ **平台画像**
@@ -97,6 +99,44 @@ chatbot 使用约定：
 3. 用户要求伤感类剪辑时，如实告知该模板未标定停用，可先按通用模板剪；
 4. 当前 L3 选窗按分数贪心挑选，`prefer` 是策略提示与解释口径，二期才参与选窗重排。
 
+## 能力一·扩展：分镜捕捉 + 叙事剪辑计划（混剪）
+
+剪辑前先按镜头捕捉全片画面，再按「风格→画面目标」匹配镜头，最后按叙事
+模板重排（允许混剪打乱时间顺序：事件→结果 / 对比开场）：
+
+```bash
+# 1) 分镜捕捉：切点分镜 + 逐镜运动/亮度信号
+curl -s -X POST "$BASE/v1/storyboard/extract" -H 'Content-Type: application/json' \
+  -d '{"video_path": "<绝对路径>", "frames_per_shot": 3}'
+
+# 2) 叙事计划：风格→画面目标匹配 + 模板重排
+#    模板：linear 顺叙 / hook_first 高潮置顶 / climax_first / twist_bridge 对比开场
+#    interleave=true：群像人物-行动交错（宙斯→释放闪电，jimmy→教扫码机器）
+curl -s -X POST "$BASE/v1/narrative/plan" -H 'Content-Type: application/json' \
+  -d '{"video_path": "<绝对路径>", "style_id": "ran_xiang",
+       "template_id": "hook_first", "target_duration_seconds": 15,
+       "interleave": false}'
+
+# 画面目标/模板清单（风格→画面对应关系的权威来源）
+curl -s "$BASE/v1/narrative"
+```
+
+当前画面目标（provisional 标定，ZEUS 群像素材实测）：
+
+| 风格 | 画面目标 | 本地信号口径 |
+|---|---|---|
+| 日常 | 波澜起伏（平静→爆发相邻镜头对） | 前镜低运动 → 后镜高运动 |
+| 恋爱 | 亲密动作 | 低运动长镜（语义交 L2 确认） |
+| 战斗 | 夸张特效/血液冲击 | 高运动 + 亮度剧变（雷电/爆炸） |
+| 群像 | 人物-行动交错 | 高运动长镜 + interleave |
+
+chatbot 使用约定：
+
+1. 建议先 `signals` + `profiles/evaluate` 判断整体风格，再传 `style_id`；
+2. `segments` 是混剪后的成片时间轴，每段保持原片内完整、不重复使用镜头；
+3. `notes` 会标注降级/近似情况（如 contrast_open 无对比对回退 peak_first）；
+4. 人物/行动等语义由本地时间段近似，正式交错需 L2（`prompts/narrative_board.md`）确认，回复用户时需说明。
+
 ## 能力二：单步分析（轻量问答场景）
 
 ```bash
@@ -160,6 +200,9 @@ python3 skills/video-auto-clipper/smartclip_call.py run <视频绝对路径>    
 python3 skills/video-auto-clipper/smartclip_call.py signals <视频绝对路径>    # L0 信号
 python3 skills/video-auto-clipper/smartclip_call.py dedup <视频绝对路径>      # 降重体检
 python3 skills/video-auto-clipper/smartclip_call.py templates                 # 剪辑模板倾向
+python3 skills/video-auto-clipper/smartclip_call.py storyboard <视频绝对路径>  # 分镜捕捉
+python3 skills/video-auto-clipper/smartclip_call.py narrative <视频绝对路径> \
+  --style ran_xiang --template hook_first --interleave                         # 叙事混剪计划
 python3 skills/video-auto-clipper/smartclip_call.py platforms                 # 平台画像
 python3 skills/video-auto-clipper/smartclip_call.py jobs                      # 任务列表
 ```

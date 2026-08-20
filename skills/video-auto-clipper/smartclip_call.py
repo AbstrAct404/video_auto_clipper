@@ -6,6 +6,8 @@
     python3 smartclip_call.py signals <video_path>
     python3 smartclip_call.py dedup <video_path>
     python3 smartclip_call.py templates          # 各类型视频的剪辑模板倾向
+    python3 smartclip_call.py storyboard <video_path>   # 剪辑前分镜捕捉
+    python3 smartclip_call.py narrative <video_path> [--style ran_xiang] [--template hook_first] [--interleave]
     python3 smartclip_call.py platforms
     python3 smartclip_call.py jobs
     python3 smartclip_call.py status <job_id>
@@ -79,6 +81,64 @@ def cmd_templates() -> int:
     return 0
 
 
+def cmd_storyboard(args: argparse.Namespace) -> int:
+    """剪辑前分镜捕捉：全片切点分镜 + 逐镜采样信号。"""
+    data = _api(
+        "POST",
+        "/v1/storyboard/extract",
+        {"video_path": args.video_path, "frames_per_shot": args.frames_per_shot},
+        timeout=300,
+    )
+    print(
+        f"时长 {data['duration_seconds']}s，捕捉到 {data['shot_count']} 个镜头\n",
+        file=sys.stderr,
+    )
+    for shot in data["shots"]:
+        print(
+            f"镜头{shot['index']:>2} {shot['start_seconds']:6.2f}-{shot['end_seconds']:6.2f}"
+            f"  运动={shot['mean_motion_intensity']:.2f}"
+            f"  亮度突变={shot['luminance_spike_ratio']:.2f}"
+        )
+    return 0
+
+
+def cmd_narrative(args: argparse.Namespace) -> int:
+    """叙事剪辑计划：风格→画面目标匹配 + 混剪重排（人物-行动交错可选）。"""
+    body = {
+        "video_path": args.video_path,
+        "template_id": args.template,
+        "target_duration_seconds": args.duration,
+        "frames_per_shot": args.frames_per_shot,
+        "interleave": args.interleave,
+    }
+    if args.style:
+        body["style_id"] = args.style
+    data = _api("POST", "/v1/narrative/plan", body, timeout=300)
+    print(
+        f"模板 {data['template_id']}：命中 {len(data['matches'])} 个目标，"
+        f"排布 {len(data['segments'])} 段，共 {data['total_duration_seconds']}s"
+    )
+    for note in data["notes"]:
+        print(f"  注：{note}")
+    print("\n命中目标（按分数）：")
+    for match in data["matches"][:8]:
+        print(
+            f"  {match['target_id']} 镜头{match['shot_indexes']}"
+            f" {match['start_seconds']:.2f}-{match['end_seconds']:.2f}s"
+            f" 分数={match['score']}"
+        )
+    print("\n成片时间轴（混剪顺序）：")
+    for segment in data["segments"]:
+        tag = "开场钩子" if segment["role"] == "opening" else "        "
+        print(
+            f"  {tag} 原片 {segment['start_seconds']:.2f}-{segment['end_seconds']:.2f}s"
+            f" ← {'、'.join(segment['target_ids'])}"
+        )
+    if args.interleave:
+        print("\n提示：人物-行动交错为本地时间段近似，人物/行动语义需 L2 标注确认。")
+    return 0
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     job = _api(
         "POST",
@@ -125,6 +185,23 @@ def main(argv: list[str] | None = None) -> int:
     dedup.add_argument("--max-frames", type=int, default=16)
 
     sub.add_parser("templates", help="各类型视频的剪辑模板倾向")
+
+    storyboard = sub.add_parser("storyboard", help="剪辑前分镜捕捉（镜头级信号）")
+    storyboard.add_argument("video_path")
+    storyboard.add_argument("--frames-per-shot", type=int, default=3)
+
+    narrative = sub.add_parser("narrative", help="叙事剪辑计划（风格→画面 + 混剪重排）")
+    narrative.add_argument("video_path")
+    narrative.add_argument("--style", help="风格 id（如 ran_xiang），只评估归属该风格的目标")
+    narrative.add_argument(
+        "--template",
+        default="hook_first",
+        help="linear/hook_first/climax_first/twist_bridge（默认 hook_first）",
+    )
+    narrative.add_argument("--duration", type=float, default=15)
+    narrative.add_argument("--frames-per-shot", type=int, default=3)
+    narrative.add_argument("--interleave", action="store_true", help="人物-行动交错（群像混剪）")
+
     sub.add_parser("platforms", help="平台画像")
     sub.add_parser("jobs", help="任务列表")
 
@@ -140,6 +217,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_run(args)
     if args.command == "templates":
         return cmd_templates()
+    if args.command == "storyboard":
+        return cmd_storyboard(args)
+    if args.command == "narrative":
+        return cmd_narrative(args)
     if args.command == "signals":
         _dump(_api("POST", "/v1/signals/compute", {"video_path": args.video_path}))
         return 0

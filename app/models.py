@@ -348,3 +348,74 @@ class DedupCompareResponse(StrictModel):
     verdict: Literal["block", "review", "pass"]
     flags: list[str] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
+
+
+# ---------- 分镜捕捉 / 叙事剪辑 ----------
+
+
+class StoryboardRequest(StrictModel):
+    video_path: str = Field(min_length=1)
+    frames_per_shot: int = Field(default=3, ge=1, le=8)
+    max_frames: int = Field(default=240, ge=16, le=960)
+    scene_threshold: float | None = Field(default=None, gt=0, lt=1)
+
+
+class ShotInfo(StrictModel):
+    index: int
+    start_seconds: float = Field(ge=0)
+    end_seconds: float = Field(gt=0)
+    duration_seconds: float = Field(gt=0)
+    sampled_frames: int = Field(ge=0)
+    mean_motion_intensity: float = Field(ge=0)
+    peak_motion_intensity: float = Field(ge=0)
+    luminance_spike_ratio: float = Field(ge=0, le=1)
+    luminance_delta_max: float = Field(ge=0, le=1)
+
+
+class StoryboardResponse(StrictModel):
+    schema_version: str = "storyboard-1.0"
+    video_path: str
+    duration_seconds: float
+    shot_count: int
+    shots: list[ShotInfo]
+
+
+class NarrativePlanRequest(StrictModel):
+    video_path: str = Field(min_length=1)
+    style_id: str | None = Field(default=None, min_length=1)
+    template_id: str = Field(default="hook_first", min_length=1)
+    target_duration_seconds: float = Field(default=15.0, gt=0, le=60)
+    interleave: bool = False
+    frames_per_shot: int = Field(default=3, ge=1, le=8)
+    max_frames: int = Field(default=240, ge=16, le=960)
+
+
+class NarrativeMatchItem(StrictModel):
+    target_id: str
+    kind: Literal["shot", "pair"]
+    shot_indexes: list[int] = Field(min_length=1, max_length=2)
+    start_seconds: float = Field(ge=0)
+    end_seconds: float = Field(gt=0)
+    score: float
+
+
+class NarrativeSegment(StrictModel):
+    start_seconds: float = Field(ge=0)
+    end_seconds: float = Field(gt=0)
+    shot_indexes: list[int] = Field(min_length=1, max_length=2)
+    target_ids: list[str] = Field(min_length=1)
+    score: float
+    role: str
+
+
+class NarrativePlanResponse(StrictModel):
+    schema_version: str = "narrative-plan-1.0"
+    video_path: str
+    style_id: str | None
+    template_id: str
+    calibration_status: str
+    shot_count: int
+    matches: list[NarrativeMatchItem] = Field(default_factory=list, max_length=64)
+    segments: list[NarrativeSegment] = Field(default_factory=list)
+    total_duration_seconds: float = 0.0
+    notes: list[str] = Field(default_factory=list)
