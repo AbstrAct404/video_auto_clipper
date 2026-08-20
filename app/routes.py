@@ -297,6 +297,8 @@ def list_profiles(request: Request) -> dict[str, object]:
                 "l2_trigger": (
                     profile.l2_fallback.trigger if profile.l2_fallback else None
                 ),
+                # 剪辑模板倾向：供 chatbot/前端按风格选择剪辑策略
+                "clip_strategy": dict(profile.clip_strategy),
             }
             for profile in rule_book.profiles
         ],

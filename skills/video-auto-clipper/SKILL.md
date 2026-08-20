@@ -18,6 +18,7 @@ description: >
 用户说出以下意图时触发：
 
 - 「把这个视频剪成 15 秒」「一键剪辑」「批量切片」→ **一键成片（jobs）**
+- 「燃向/伤感/对白类视频怎么剪」「剪辑模板是什么」→ **剪辑模板倾向**
 - 「分析这个视频的节奏/运动/信号」→ **L0 信号分析**
 - 「会不会被判搬运/重复」「发布前查重」→ **降重检测**
 - 「B 站/抖音/小红书发什么分区」「竖屏还是横屏、最长多少秒」→ **平台画像**
@@ -67,6 +68,34 @@ echo "$BASE/v1/jobs/<job_id>/product"
   API Key），未配置时保持 `false`，流水线照常完成；
 - 失败时响应 `error` 字段给出原因；可 `POST /v1/jobs/<job_id>/retry` 重试、
   `POST /v1/jobs/<job_id>/cancel` 取消、`GET /v1/jobs` 列最近任务。
+
+## 剪辑模板倾向（按视频类型）
+
+每种视频风格对应一张规则卡的 `clip_strategy`，是权威来源：
+
+```bash
+# 动态获取（推荐：规则书升级后自动跟随，不会过时）
+curl -s "$BASE/v1/profiles"   # 每个 profile 含 clip_strategy 与 hooks
+# 或零依赖脚本（含 prefer 语义中文对照）
+python3 skills/video-auto-clipper/smartclip_call.py templates
+```
+
+当前规则书（v0.2，provisional）静态兜底表：
+
+| 风格 | 目标时长 | 剪辑倾向 prefer | 钩子偏好 | 状态 |
+|---|---|---|---|---|
+| 燃向 `ran_xiang` | 15s（单片最短 1.0s） | `high_motion_segments`：优先高运动片段（打斗/追逐/快速推拉），保留能量顶点 | C 视觉张力、D 情绪爆发 | 启用 |
+| 快节奏对白 `fast_dialogue` | 15s | `hook_first_3s`：前 3 秒必须上钩子（悬念/冲突直给） | E 悬念前置 | 启用（L2 强制复核） |
+| 伤感 `shang_gan` | 15s | `close_up_slow_pace`：特写镜头 + 慢节奏情绪段落，长镜头不切碎 | A 情感冲突、D 情绪爆发 | **停用**（缺慢节奏标定样本） |
+| 质量异常 `quality_flag` | — | `flagged_for_review`：仅标记转人工复核，不自动剪 | — | 启用 |
+
+chatbot 使用约定：
+
+1. 用户指明风格时，提交任务带上 `"profile_ids": ["<风格 id>"]`（如 `["ran_xiang"]`）；
+2. 回复剪辑方向时引用该风格的 prefer 语义，并提醒规则书处于 `provisional`
+   标定阶段，结果仅供试运行参考；
+3. 用户要求伤感类剪辑时，如实告知该模板未标定停用，可先按通用模板剪；
+4. 当前 L3 选窗按分数贪心挑选，`prefer` 是策略提示与解释口径，二期才参与选窗重排。
 
 ## 能力二：单步分析（轻量问答场景）
 
@@ -130,6 +159,7 @@ curl -s "$BASE/v1/platforms"
 python3 skills/video-auto-clipper/smartclip_call.py run <视频绝对路径>        # 一键成片并等待
 python3 skills/video-auto-clipper/smartclip_call.py signals <视频绝对路径>    # L0 信号
 python3 skills/video-auto-clipper/smartclip_call.py dedup <视频绝对路径>      # 降重体检
+python3 skills/video-auto-clipper/smartclip_call.py templates                 # 剪辑模板倾向
 python3 skills/video-auto-clipper/smartclip_call.py platforms                 # 平台画像
 python3 skills/video-auto-clipper/smartclip_call.py jobs                      # 任务列表
 ```

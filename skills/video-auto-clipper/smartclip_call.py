@@ -5,6 +5,7 @@
     python3 smartclip_call.py run <video_path> [--duration 15] [--no-l2]
     python3 smartclip_call.py signals <video_path>
     python3 smartclip_call.py dedup <video_path>
+    python3 smartclip_call.py templates          # 各类型视频的剪辑模板倾向
     python3 smartclip_call.py platforms
     python3 smartclip_call.py jobs
     python3 smartclip_call.py status <job_id>
@@ -47,6 +48,35 @@ def _api(method: str, path: str, body: dict | None = None, timeout: int = 60) ->
 
 def _dump(data: dict) -> None:
     print(json.dumps(data, ensure_ascii=False, indent=2))
+
+
+# 剪辑模板倾向的 prefer 语义对照（与 configs/style_profiles.yaml clip_strategy 对齐）
+_PREFER_EXPLAIN = {
+    "high_motion_segments": "优先挑高运动片段（打斗/追逐/快速推拉），保留能量顶点",
+    "hook_first_3s": "前 3 秒必须上钩子（悬念/冲突直给），后接快节奏对白",
+    "close_up_slow_pace": "优先特写镜头 + 慢节奏情绪段落，保留长镜头不切碎",
+    "flagged_for_review": "仅作异常标记转人工复核，不自动选窗剪辑",
+}
+
+
+def cmd_templates() -> int:
+    data = _api("GET", "/v1/profiles")
+    print(f"规则书标定状态：{data['calibration']['status']}\n")
+    for profile in data["profiles"]:
+        strategy = profile.get("clip_strategy") or {}
+        state = "启用" if profile["enabled"] else "停用（缺标定样本）"
+        print(f"◆ {profile['display_name']}（{profile['profile_id']}） [{state}]")
+        if strategy:
+            prefer = strategy.get("prefer", "")
+            print(
+                f"  目标时长：{strategy.get('target_duration_seconds', 15)}s"
+                f"{' · 单片最短 ' + str(strategy['min_segment_seconds']) + 's' if strategy.get('min_segment_seconds') else ''}"
+            )
+            print(f"  剪辑倾向：{prefer} —— {_PREFER_EXPLAIN.get(prefer, '见规则书 notes')}")
+        if profile.get("hooks"):
+            print(f"  钩子偏好：{'、'.join(profile['hooks'])}")
+        print()
+    return 0
 
 
 def cmd_run(args: argparse.Namespace) -> int:
@@ -94,6 +124,7 @@ def main(argv: list[str] | None = None) -> int:
     dedup.add_argument("video_path")
     dedup.add_argument("--max-frames", type=int, default=16)
 
+    sub.add_parser("templates", help="各类型视频的剪辑模板倾向")
     sub.add_parser("platforms", help="平台画像")
     sub.add_parser("jobs", help="任务列表")
 
@@ -107,6 +138,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "run":
         return cmd_run(args)
+    if args.command == "templates":
+        return cmd_templates()
     if args.command == "signals":
         _dump(_api("POST", "/v1/signals/compute", {"video_path": args.video_path}))
         return 0
