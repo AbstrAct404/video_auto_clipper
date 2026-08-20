@@ -1,0 +1,216 @@
+{
+  "schema_version": "sample-set-1.0",
+  "source": "AIGC/tagging/短剧案例.xlsx（差质量/高质量两个 sheet）",
+  "note": "本地 mp4 文件名前缀即 OSS workflow 文件 ID，可直接映射剧名；quality_label 为表内人工标注（高质量=投放效果好的 sheet）",
+  "video_dir": "/Users/studyhard/alibaba/untitled folder",
+  "samples": [
+    {
+      "file": "1a3373ad-19ef36031d7-0005-9573-534-c9280.mp4",
+      "title": "He Chose My Stepsister, Never Knowing I Was the Real Heiress",
+      "quality_label": "高质量",
+      "drama_source": "创作者剧",
+      "drama_type": "本土AI",
+      "genre_guess": "豪门复仇/千金逆袭",
+      "status": "local"
+    },
+    {
+      "file": "1f40432d-19e6338657c-0005-9573-534-c9280 (1).mp4",
+      "title": "Travelers",
+      "quality_label": "高质量",
+      "drama_source": "创作者剧",
+      "drama_type": "本土AI",
+      "genre_guess": "奇幻喜剧（西游恶搞）",
+      "status": "local"
+    },
+    {
+      "file": "2918c23f-19f0e54a7f7-0005-9573-534-c9280.mp4",
+      "title": null,
+      "quality_label": null,
+      "note": "未出现在短剧案例.xlsx 的 mp4 链接中，标注待补",
+      "status": "local"
+    },
+    {
+      "file": "2e92b992-19e63455b1e-0005-9573-534-c9280.mp4",
+      "title": null,
+      "quality_label": null,
+      "note": "未出现在短剧案例.xlsx 的 mp4 链接中；此前误映射为 Your \"Perfect Husband\"（真实 ID 为 5e90fd73），已纠正，标注待补",
+      "status": "local"
+    },
+    {
+      "file": "3ca8200-19f0e2c4f59-0005-9573-534-c9280.mp4",
+      "title": "FATED BLOOD",
+      "quality_label": "高质量",
+      "drama_source": "创作者剧",
+      "drama_type": "本土AI",
+      "genre_guess": "狼人宿命爱情",
+      "status": "local"
+    },
+    {
+      "file": "58920349-metadata_video_1080p_4f86acbd-c2a5-47ea-a8de-9e6dade5043f_refiner.mp4",
+      "title": null,
+      "quality_label": null,
+      "note": "5s AI 生成参考片，不参与风格标定",
+      "status": "local"
+    },
+    {
+      "file": "46db34a8-19e4d9b0c4b-0005-9573-534-c9280.mp4",
+      "title": "ZEUS",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "本土AI",
+      "genre_guess": "都市奇幻喜剧（三神下凡）",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/customerTrans/d995326d81e3d278bd712c5e075bc049/46db34a8-19e4d9b0c4b-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "5ae44a47-19f02bcccb4-0005-9573-534-c9280.mp4",
+      "title": "The Dock Queen",
+      "quality_label": "高质量",
+      "drama_source": "创作者剧",
+      "drama_type": "本土AI",
+      "genre_guess": "码头女王/复仇逆袭",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/customerTrans/d995326d81e3d278bd712c5e075bc049/5ae44a47-19f02bcccb4-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "2d51bc29-19f0e54a7e1-0005-9573-534-c9280.mp4",
+      "title": "THE SERPENT'S VOW",
+      "quality_label": "高质量",
+      "drama_source": "创作者剧",
+      "drama_type": "本土AI",
+      "genre_guess": "蛇妖奇幻爱情（预期偏慢节奏/情感）",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/customerTrans/d995326d81e3d278bd712c5e075bc049/2d51bc29-19f0e54a7e1-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "4a419d59-19f02dd51dd-0005-9573-534-c9280.mp4",
+      "title": "Love Died When He Chose Her",
+      "quality_label": "差质量",
+      "drama_source": "创作者剧",
+      "drama_type": "本土AI",
+      "genre_guess": "车祸背叛/隐藏千金",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/4a419d59-19f02dd51dd-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "dea0a74-19ef28f591d-0005-9573-534-c9280.mp4",
+      "title": "Mystery Plateau: Redemption",
+      "quality_label": "差质量",
+      "drama_source": "引入剧",
+      "drama_type": "本土AI",
+      "genre_guess": "科幻惊悚（高原地下实验室）",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/dea0a74-19ef28f591d-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "5e90fd73-19f02c9e742-0005-9573-534-c9280.mp4",
+      "title": "Your \"Perfect Husband\" Act Ends Here",
+      "quality_label": "差质量",
+      "drama_source": "创作者剧",
+      "drama_type": "本土AI",
+      "genre_guess": "婚姻背叛/冷复仇",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/5e90fd73-19f02c9e742-0005-9573-534-c9280.mp4",
+      "status": "downloading"
+    },
+    {
+      "file": "472875e-19eb778ef66-0005-9573-534-c9280.mp4",
+      "title": "One Wild Night: Mr. Ye's Obsessive Love",
+      "quality_label": "差质量",
+      "drama_source": "创作者剧",
+      "drama_type": "译制剧",
+      "genre_guess": "霸道总裁爱情（译制）",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/472875e-19eb778ef66-0005-9573-534-c9280.mp4",
+      "status": "downloading"
+    },
+    {
+      "file": "56c5d599-19ef28dcfc4-0005-9573-534-c9280.mp4",
+      "title": "Love in the clouds: he come from the sky",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "本土AI",
+      "genre_guess": "荒岛爱情（飞行员与部落）",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/56c5d599-19ef28dcfc4-0005-9573-534-c9280.mp4",
+      "status": "downloading"
+    },
+    {
+      "file": "41469f9d-19ef2574e46-0005-9573-534-c9280.mp4",
+      "title": "The Quiet Wife You Wronged Was an Heiress",
+      "quality_label": "高质量",
+      "drama_source": "创作者剧",
+      "drama_type": "本土AI",
+      "genre_guess": "隐藏千金复仇",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/41469f9d-19ef2574e46-0005-9573-534-c9280.mp4",
+      "status": "downloading"
+    },
+    {
+      "file": "609b321a-19ef290cb97-0005-9573-534-c9280.mp4",
+      "title": "The Other Me in the Mirror Is a Billionaire",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "本土AI",
+      "genre_guess": "平行世界/校园霸凌逆袭",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/609b321a-19ef290cb97-0005-9573-534-c9280.mp4",
+      "status": "downloading"
+    },
+    {
+      "file": "325f6f4f-19ecb07c730-0005-9573-534-c9280.mp4",
+      "title": "EMBER & MOON",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "本土AI",
+      "genre_guess": "凤凰赏金猎人奇幻",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/customerTrans/d995326d81e3d278bd712c5e075bc049/325f6f4f-19ecb07c730-0005-9573-534-c9280.mp4",
+      "status": "downloading"
+    },
+    {
+      "file": "2c9e5e5e-19f1cce8db0-0005-9573-534-c9280.mp4",
+      "title": "To Marry the Enemy",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "本土AI",
+      "genre_guess": "亚特兰蒂斯史诗爱情",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/2c9e5e5e-19f1cce8db0-0005-9573-534-c9280.mp4",
+      "status": "downloading"
+    },
+    {
+      "file": "65b019e3-19ed365d636-0005-9573-534-c9280.mp4",
+      "title": "(Dubbed) Mr Ford, Your Wife Wants a Divorce!",
+      "quality_label": "高质量",
+      "drama_source": "创作者剧",
+      "drama_type": "译制剧",
+      "genre_guess": "都市婚恋（真人译制，预期慢节奏对白）",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/65b019e3-19ed365d636-0005-9573-534-c9280.mp4",
+      "status": "downloading"
+    },
+    {
+      "file": "6a0e4c5c-19eb75c5cd2-0005-9573-534-c9280.mp4",
+      "title": "Destined To Reward You With My Love",
+      "quality_label": "高质量",
+      "drama_source": "创作者剧",
+      "drama_type": "译制剧",
+      "genre_guess": "白蛇奇幻爱情（真人译制）",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/6a0e4c5c-19eb75c5cd2-0005-9573-534-c9280.mp4",
+      "status": "downloading"
+    },
+    {
+      "file": "28bfe24-19eed410953-0005-9573-534-c9280.mp4",
+      "title": "No Divorce, No Separate Rooms! A Mother's Vow to Reclaim Her Family",
+      "quality_label": "高质量",
+      "drama_source": "创作者剧",
+      "drama_type": "国内AI",
+      "genre_guess": "家庭轻喜剧",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/customerTrans/d995326d81e3d278bd712c5e075bc049/28bfe24-19eed410953-0005-9573-534-c9280.mp4",
+      "status": "downloading"
+    },
+    {
+      "file": "3a1776f2-19f035cc8a6-0005-9573-534-c9280.mov",
+      "title": "Golden Feather: Temptation Game",
+      "quality_label": "高质量",
+      "drama_source": "创作者剧",
+      "drama_type": "本土剧",
+      "genre_guess": "校园诱惑（真人本土剧，非 AI）",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/3a1776f2-19f035cc8a6-0005-9573-534-c9280.mov",
+      "status": "downloading"
+    }
+  ]
+}

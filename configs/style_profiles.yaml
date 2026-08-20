@@ -1,0 +1,120 @@
+# 风格画像规则卡（示例，v0.2）
+# 设计依据: docs/style-profiles-yaml-design.md
+# 阈值来源: docs/calibration/signal_matrix_v2.json（11 支样本，其中 9 支带高质量/差质量标注）
+# 注意: status != calibrated 的规则卡只允许用于试运行，不允许生产判定
+
+schema_version: style-profiles-1.0
+
+calibration:
+  status: provisional          # provisional | calibrated | deprecated
+  sample_set: docs/calibration/signal_matrix_v2.json
+  sample_count: 9              # 仅计带质量标注的样本（11 支中 2 支无标注）
+  calibrated_at: "2026-08-20"
+  next_review_at: "2026-09-20" # 每月复标提醒
+
+# 信号字段白名单（与 SignalValues schema_version=signals-1.0 对齐）
+# 条件里只允许引用这里列出的字段，防止拼写错误静默失效
+signal_schema:
+  version: signals-1.0
+  fields:
+    - shot_cut_rate_per_min
+    - mean_motion_intensity
+    - peak_motion_intensity
+    - continuous_motion_window_ratio
+    - audio_mean_volume_db
+    - luminance_spike_ratio
+
+profiles:
+  - id: ran_xiang
+    display_name: 燃向
+    enabled: true
+    # 硬判据：全部满足才命中（AND 语义）
+    conditions:
+      all:
+        - { signal: mean_motion_intensity, op: gte, value: 0.42 }
+        - { signal: peak_motion_intensity, op: gte, value: 0.60 }
+        - { signal: shot_cut_rate_per_min, op: gte, value: 18 }
+    # 软评分：命中后按超阈幅度打分用于排序（0~1，可缺省）
+    score_weights:
+      mean_motion_intensity: 0.5
+      luminance_spike_ratio: 0.3
+      audio_mean_volume_db: 0.2   # 注意 dB 为负值，加载时按"越大越响"归一
+    # 评分特征独立于硬判据，避免权重声明却没有可解释的归一化锚点。
+    # score = clamp((value-anchor)/scale, 0, 1)；lower 则方向相反。
+    score_features:
+      mean_motion_intensity: { direction: higher, anchor: 0.42, scale: 0.30 }
+      luminance_spike_ratio: { direction: higher, anchor: 0.08, scale: 0.12 }
+      audio_mean_volume_db: { direction: higher, anchor: -30, scale: 15 }
+    # 钩子偏好（沿用前贴项目五分类 A~E）
+    hooks: [C_visual_tension, D_emotional_outburst]
+    # L2 兜底：多风格命中或置信度低时交云端 LLM 复核的策略引用
+    l2_fallback:
+      prompt_ref: prompts/style_ran_xiang.md
+      trigger: ambiguous_multi_hit
+      max_windows: 3              # 最多送 3 个候选窗口，控成本
+    # 剪辑策略提示（L3 消费）
+    clip_strategy:
+      target_duration_seconds: 15
+      prefer: high_motion_segments
+      min_segment_seconds: 1.0
+
+  - id: fast_dialogue
+    display_name: 快节奏对白
+    enabled: true
+    conditions:
+      all:
+        - { signal: shot_cut_rate_per_min, op: gte, value: 25 }
+        - { signal: mean_motion_intensity, op: lt, value: 0.40 }
+    hooks: [E_suspense_front]
+    l2_fallback:
+      prompt_ref: prompts/style_dialogue.md
+      trigger: always              # 一期无台词信号，强制 L2 确认钩子
+      max_windows: 2
+    clip_strategy:
+      target_duration_seconds: 15
+      prefer: hook_first_3s
+
+  - id: shang_gan
+    display_name: 伤感
+    enabled: false                 # 无慢节奏样本标定，禁止启用
+    conditions:
+      all:
+        - { signal: mean_motion_intensity, op: lte, value: 0.20 }
+        - { signal: shot_cut_rate_per_min, op: lte, value: 12 }
+        # 二期补充: close_up_ratio >= 0.4（mediapipe/SigLIP2）
+    hooks: [A_emotional_conflict, D_emotional_outburst]
+    clip_strategy:
+      target_duration_seconds: 15
+      prefer: close_up_slow_pace
+
+  # 质量预筛卡（v0.2 新增）：用带标注样本实测得出的粗信号，在批量剪辑前
+  # 把明显异常素材先筛出，降低无效剪辑。样本仅 9 支，只允许试运行。
+  - id: quality_flag
+    display_name: 质量异常预筛
+    enabled: true
+    conditions:
+      any:                         # 命中任一条即标记为待复核
+        # 差质量样本 Love Died 的连续运动窗比例仅 0.25（其余 8 支均 ≥0.75）
+        - { signal: continuous_motion_window_ratio, op: lte, value: 0.5 }
+        # 差质量样本 Love Died 亮度突变 0.147 为全批最高（高质量多 ≤0.13，
+        # 重叠区存在，故只做提示不做拦截）
+        - { signal: luminance_spike_ratio, op: gte, value: 0.14 }
+    hooks: []                      # 预筛卡不参与钩子选择
+    l2_fallback:
+      prompt_ref: prompts/quality_review.md
+      trigger: always              # 命中即送 L2 复核，不自动丢弃
+      max_windows: 2
+    clip_strategy:
+      target_duration_seconds: 15
+      prefer: flagged_for_review
+    notes: |
+      实测发现（signal_matrix_v2.json）：切镜率与质量标签无关（17~36/min 全覆盖），
+      不作为质量判据；连续运动窗比例是当前唯一有区分度的信号，但仅 1 支反例支撑，
+      样本扩到 30+ 支前不得升级为硬拦截。
+
+# 合规门禁（对齐 tagging 14 维确定性 Gatekeeper，L4 消费）
+gatekeeper:
+  violence:
+    block: [violence_moderate, violence_graphic]
+    review: [violence_light]       # 轻微血腥 → 人审，不自动放行
+  notes: 门禁标签由 tagging/LLM 提供，规则卡只做确定性查表，不做模糊判断

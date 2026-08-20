@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>北斗智影 · 智能剪辑控制台</title>
+  <style>
+    :root { color-scheme: dark; --bg:#10131c; --panel:#191e2b; --line:#30394e; --text:#eef2ff; --muted:#a9b2c9; --brand:#7c8cff; --ok:#4ed4a8; --warn:#ffbf69; --bad:#ff6d7a; }
+    * { box-sizing:border-box; } body { margin:0; background:linear-gradient(135deg,#10131c,#17152a); color:var(--text); font:14px/1.5 ui-sans-serif,system-ui,"PingFang SC",sans-serif; }
+    main { max-width:1080px; margin:auto; padding:28px 20px 60px; } header { display:flex; justify-content:space-between; gap:16px; align-items:start; margin-bottom:24px; } h1 { font-size:24px; margin:0; } h2 { font-size:16px; margin:0 0 14px; } p { color:var(--muted); margin:6px 0; } a { color:#b7c0ff; }
+    .grid { display:grid; grid-template-columns:360px 1fr; gap:18px; } .card { background:rgba(25,30,43,.94); border:1px solid var(--line); border-radius:14px; padding:18px; box-shadow:0 14px 50px #0003; }
+    label { display:block; color:var(--muted); margin:12px 0 5px; } input { width:100%; border:1px solid var(--line); background:#111624; color:var(--text); padding:10px 11px; border-radius:8px; } .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; } .check { display:flex; gap:8px; align-items:center; margin-top:14px; color:var(--text); } .check input { width:auto; }
+    button { border:0; background:var(--brand); color:white; cursor:pointer; font-weight:700; padding:10px 14px; border-radius:8px; margin-top:16px; } button:hover { filter:brightness(1.12); } button:disabled { opacity:.5; cursor:wait; }
+    .empty { color:var(--muted); padding:26px 8px; text-align:center; } .topline { display:flex; justify-content:space-between; gap:12px; align-items:center; } .badge { font-size:12px; padding:3px 8px; border-radius:20px; background:#2d3549; } .completed { background:#134b3e; color:var(--ok); } .failed,.cancelled { background:#592c38; color:#ffb5bd; } .analyzing,.reviewing,.rendering { background:#514122; color:var(--warn); }
+    .event { padding:9px 0; border-bottom:1px solid #ffffff12; display:grid; grid-template-columns:85px 95px 1fr; gap:8px; } .event time { color:var(--muted); font-size:12px; } pre { white-space:pre-wrap; overflow:auto; background:#101522; padding:12px; border-radius:8px; max-height:270px; color:#c9d3ec; } video { width:100%; margin-top:14px; border-radius:10px; background:#000; } .hidden { display:none; }
+    @media (max-width:760px) { .grid { grid-template-columns:1fr; } header { display:block; } }
+  </style>
+</head>
+<body>
+<main>
+  <header><div><h1>北斗智影 · 智能剪辑控制台</h1><p>输入素材路径，后台自动分析、选段、渲染并归档到 products。</p></div><a href="/docs" target="_blank">API 文档 ↗</a></header>
+  <div class="grid">
+    <section class="card"><h2>创建剪辑任务</h2>
+      <form id="job-form"><label>服务器素材路径</label><input id="video_path" required placeholder="/path/to/source.mp4" />
+      <div class="row"><div><label>目标时长（秒）</label><input id="duration" type="number" min="1" max="60" value="15" /></div><div><label>分析窗口数</label><input id="windows" type="number" min="2" max="16" value="8" /></div></div>
+      <label>成片文件名（可选）</label><input id="output_name" placeholder="例如：episode-01.mp4" />
+      <label class="check"><input id="request_l2" type="checkbox" checked />尝试真实 L2 复核（未配置时自动记录跳过）</label>
+      <button id="submit" type="submit">开始生成成片</button></form>
+      <p>支持 MP4/MOV。本页读取的是运行服务机器上的路径。</p>
+    </section>
+    <section class="card"><div class="topline"><h2>任务进度</h2><span id="status" class="badge">等待创建</span></div>
+      <div id="empty" class="empty">创建任务后将在这里显示分析、复核与渲染进度。</div>
+      <div id="detail" class="hidden"><div id="events"></div><div id="result"></div><video id="product" class="hidden" controls></video></div>
+    </section>
+  </div>
+</main>
+<script>
+  const $ = id => document.getElementById(id); let currentJob = null, timer = null;
+  const terminal = new Set(['completed','failed','cancelled']);
+  function status(value) { const el=$('status'); el.textContent=value; el.className='badge '+value; }
+  function show(job) {
+    $('empty').classList.add('hidden'); $('detail').classList.remove('hidden'); status(job.status);
+    $('events').innerHTML=(job.events||[]).map(e=>`<div class="event"><time>${new Date(e.at).toLocaleTimeString()}</time><b>${e.stage}</b><span>${e.message}</span></div>`).join('');
+    const result=job.result||{}; const sig=result.signals?.signals, candidates=result.signals?.candidates||[], review=result.review;
+    $('result').innerHTML = sig ? `<h2 style="margin-top:18px">真实记录</h2><pre>${JSON.stringify({signals:sig,candidate_count:candidates.length,review,clip_plan:result.clip_plan},null,2)}</pre>` : '';
+    if (job.output_path && job.status==='completed') { const v=$('product'); v.src=`/v1/jobs/${job.job_id}/product`; v.classList.remove('hidden'); }
+  }
+  async function poll() { if (!currentJob) return; const r=await fetch(`/v1/jobs/${currentJob}`); if (!r.ok) return; const job=await r.json(); show(job); if (terminal.has(job.status)) { clearInterval(timer); timer=null; $('submit').disabled=false; } }
+  $('job-form').addEventListener('submit', async e => { e.preventDefault(); $('submit').disabled=true; status('提交中');
+    const body={video_path:$('video_path').value,target_duration_seconds:Number($('duration').value),motion_window_count:Number($('windows').value),request_l2:$('request_l2').checked};
+    if ($('output_name').value.trim()) body.output_name=$('output_name').value.trim();
+    const r=await fetch('/v1/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if (!r.ok) { status('提交失败'); $('submit').disabled=false; alert((await r.json()).detail||'任务创建失败'); return; }
+    currentJob=(await r.json()).job_id; await poll(); timer=setInterval(poll,1200);
+  });
+</script>
+</body></html>

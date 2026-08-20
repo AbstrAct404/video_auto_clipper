@@ -1,0 +1,167 @@
+# 平台画像：视频类型划分 + 重复率判定规则（v1.0）
+# 调研依据见 docs/platform-taxonomy-and-dedup.md（2026-08 调研，来源附 sources）
+# 结论摘要：
+#   - 仅 B 站有公开官方分区表（tid 体系）；抖音/快手/小红书无公开分区标准，
+#     按"已降级"策略采用其创作者中心/热门话题标签体系归纳；
+#   - Meta(Instagram/Facebook)、X 无内容分区，只有原创性/反 spam 政策；
+#   - 判重普遍为多级：文件指纹(MD5) → 关键帧指纹 → AI 同质化语义，
+#     小红书另有"3 个月时间窗"与信誉分机制。
+# status=provisional：阈值为行业公开资料归纳，未经本地样本标定。
+
+schema_version: platform-profiles-1.0
+status: provisional
+updated_at: "2026-08-20"
+
+sources:
+  - "bilibili 分区 tid 表: biliup.github.io/tid-ref.html（B 站官方分区查询接口同口径）"
+  - "B 站投稿规范: 转载/自制二分 + 撞车规则（保留画质更高者）"
+  - "小红书社区新规: 3 个月内重复内容判搬运；信誉分初始 10、上限 12、低于 8 限流 100%"
+  - "Instagram/Meta Original Content Guidelines: unoriginal/aggregated 内容移出推荐流"
+  - "X Copypasta and Duplicate Content Policy: 重复内容限制触达（按 spam 处理）"
+  - "YouTube reused/repetitious content（2025-07 更新，降级参考平台）"
+  - "抖音三级查重（MD5→关键帧→AI 同质化）与原创者联盟计划（公开报道归纳）"
+
+# ---------- 视频类型划分 ----------
+
+taxonomy:
+  # 统一类目：本项目（短剧切片场景）的内部分类，各平台做 best-effort 映射。
+  # mapping 中 bilibili 使用官方 tid；无官方分区的平台使用该平台热门内容标签。
+  unified_categories:
+    - id: drama_clip
+      display_name: 短剧剧情切片
+      platforms:
+        douyin: [短剧, 剧情]
+        kuaishou: [剧情, 短剧]
+        bilibili: { name: 影视剪辑, tid: 183 }
+        xiaohongshu: [影视综, 追剧]
+        instagram: [Entertainment, Drama]
+        x: [entertainment]
+        youtube: [Entertainment]
+    - id: hype_mashup
+      display_name: 燃向混剪
+      platforms:
+        douyin: [影视剪辑, 燃向]
+        kuaishou: [影视, 混剪]
+        bilibili: { name: 影视剪辑, tid: 183 }
+        xiaohongshu: [影视综]
+        instagram: [Entertainment]
+        x: [entertainment]
+        youtube: [Entertainment]
+    - id: fast_dialogue
+      display_name: 快节奏对白
+      platforms:
+        douyin: [剧情, 短剧]
+        kuaishou: [剧情]
+        bilibili: { name: 短片, tid: 85 }
+        xiaohongshu: [影视综]
+        instagram: [Entertainment]
+        x: [entertainment]
+        youtube: [Entertainment]
+    - id: emotional
+      display_name: 情感/伤感
+      platforms:
+        douyin: [情感, 剧情]
+        kuaishou: [情感, 剧情]
+        bilibili: { name: 影视杂谈, tid: 182 }
+        xiaohongshu: [情感, 影视综]
+        instagram: [Entertainment]
+        x: [entertainment]
+        youtube: [Entertainment]
+    - id: comedy
+      display_name: 搞笑
+      platforms:
+        douyin: [搞笑]
+        kuaishou: [搞笑]
+        bilibili: { name: 搞笑, tid: 138 }
+        xiaohongshu: [搞笑]
+        instagram: [Comedy]
+        x: [comedy]
+        youtube: [Comedy]
+
+  # 各平台发布规格（降重与剪辑计划消费）
+  platform_specs:
+    douyin: { aspect: "9:16", max_seconds: 900, recommend_seconds: 15 }
+    kuaishou: { aspect: "9:16", max_seconds: 600, recommend_seconds: 15 }
+    bilibili: { aspect: "16:9", max_seconds: 14400, recommend_seconds: 15 }
+    xiaohongshu: { aspect: "9:16", max_seconds: 900, recommend_seconds: 15 }
+    instagram: { aspect: "9:16", max_seconds: 90, recommend_seconds: 15 }
+    x: { aspect: "16:9", max_seconds: 140, recommend_seconds: 15 }
+    youtube_shorts: { aspect: "9:16", max_seconds: 60, recommend_seconds: 15 }
+
+  # B 站官方分区参考（调研所得 tid 表节选，完整表见调研文档）
+  bilibili_tid_reference:
+    1: 动画
+    3: 音乐
+    4: 游戏
+    5: 娱乐
+    11: 电视剧
+    13: 番剧
+    23: 电影
+    36: 知识
+    119: 鬼畜
+    129: 舞蹈
+    155: 时尚
+    160: 生活
+    167: 国创
+    177: 纪录片
+    181: 影视
+    188: 科技
+    211: 美食
+    217: 动物圈
+    223: 汽车
+    234: 运动
+
+# ---------- 重复率判定与降重 ----------
+
+dedup_rules:
+  # 行业通用判重路径（多级漏斗）：先廉价后昂贵
+  common_stages:
+    - { id: file_hash, name: 文件指纹(MD5), cost: low }
+    - { id: frame_fingerprint, name: 关键帧/抽帧指纹比对, cost: medium }
+    - { id: grid_sampling, name: 九宫格抽帧比对, cost: medium }
+    - { id: ai_homogenization, name: AI 同质化语义检测, cost: high }
+
+  platforms:
+    douyin:
+      detection: [file_hash, frame_fingerprint, ai_homogenization]
+      penalties: [降流量, 下架, 封禁]
+      notes: 三级查重；原创者联盟计划提供全网侵权监测
+    kuaishou:
+      detection: [file_hash, frame_fingerprint]
+      penalties: [降流量, 下架]
+      notes: 社区管理规范按侵权/搬运处理，无公开阈值
+    xiaohongshu:
+      detection: [frame_fingerprint, ai_homogenization]
+      window_days: 90            # 3 个月内出现重复内容即判搬运
+      credit_score: { initial: 10, max: 12, full_traffic_block_below: 8 }
+      penalties: [限流, 扣信誉分, 停用功能]
+      notes: 信誉分低于 8 限流 100%；严打低成本二创
+    bilibili:
+      detection: [file_hash, frame_fingerprint]
+      self_repost_split: true    # 自制/转载二分，投转载也算搬运
+      collision_rule: 保留画质更高稿件
+      penalties: [锁定稿件, 退回, 封禁]
+      notes: UP 主版权保护计划主动维权
+    instagram:
+      detection: [frame_fingerprint, ai_homogenization]
+      unoriginal_excluded_from_recommendation: true
+      aggregation_penalized: true  # 聚合类账号整体降权（2026-04 扩展至图片/轮播）
+      penalties: [移出推荐流, 账号降权]
+      notes: Original Content Guidelines；无分区，仅原创性约束
+    x:
+      detection: [content_fingerprint]
+      policy: copypasta_duplicate_content
+      penalties: [限制触达]
+      notes: 重复内容按 spam 处理，限制可见性而非下架
+    youtube:                     # 降级参考平台（用户要求覆盖不到时补充）
+      detection: [file_hash, frame_fingerprint, content_id]
+      policies: [reused_content, repetitious_content]
+      penalties: [禁止变现, 下架]
+      notes: 2025-07 起 repetitious content 明确含批量生产内容
+
+  # 本地降重分析判定阈值（provisional，待样本标定后调整）
+  thresholds:
+    similarity_review: 0.75      # 与参考片帧指纹相似度 ≥0.75 → review
+    similarity_block: 0.90       # ≥0.90 → block（近似完全搬运）
+    corner_static_watermark: 0.55  # 角落静态区域占比 ≥0.55 → 疑似残留水印
+    black_bar_ratio_review: 0.12   # 黑边占比 ≥0.12 → 疑似未去源规格

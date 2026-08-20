@@ -1,0 +1,116 @@
+[
+  {
+    "video_path": "/Users/studyhard/alibaba/untitled folder/1a3373ad-19ef36031d7-0005-9573-534-c9280.mp4",
+    "schema_version": "signals-1.0",
+    "signals": {
+      "shot_cut_rate_per_min": 18.681,
+      "scene_count": 44,
+      "mean_motion_intensity": 0.3709,
+      "peak_motion_intensity": 0.504,
+      "continuous_motion_window_ratio": 0.75,
+      "audio_mean_volume_db": -19.0,
+      "luminance_spike_ratio": 0.0588,
+      "duration_seconds": 141.317007,
+      "width": 1080,
+      "height": 1920,
+      "fps": 30.0
+    },
+    "notes": [],
+    "elapsed_seconds": 26.6
+  },
+  {
+    "video_path": "/Users/studyhard/alibaba/untitled folder/1f40432d-19e6338657c-0005-9573-534-c9280 (1).mp4",
+    "schema_version": "signals-1.0",
+    "signals": {
+      "shot_cut_rate_per_min": 17.979,
+      "scene_count": 18,
+      "mean_motion_intensity": 0.4436,
+      "peak_motion_intensity": 0.7343,
+      "continuous_motion_window_ratio": 0.75,
+      "audio_mean_volume_db": -11.6,
+      "luminance_spike_ratio": 0.1017,
+      "duration_seconds": 60.07,
+      "width": 1080,
+      "height": 1920,
+      "fps": 30.0
+    },
+    "notes": [],
+    "elapsed_seconds": 7.8
+  },
+  {
+    "video_path": "/Users/studyhard/alibaba/untitled folder/2918c23f-19f0e54a7f7-0005-9573-534-c9280.mp4",
+    "schema_version": "signals-1.0",
+    "signals": {
+      "shot_cut_rate_per_min": 27.896,
+      "scene_count": 46,
+      "mean_motion_intensity": 0.3613,
+      "peak_motion_intensity": 0.4417,
+      "continuous_motion_window_ratio": 0.75,
+      "audio_mean_volume_db": -15.5,
+      "luminance_spike_ratio": 0.0515,
+      "duration_seconds": 98.94,
+      "width": 2160,
+      "height": 3840,
+      "fps": 30.0
+    },
+    "notes": [],
+    "elapsed_seconds": 50.5
+  },
+  {
+    "video_path": "/Users/studyhard/alibaba/untitled folder/2e92b992-19e63455b1e-0005-9573-534-c9280.mp4",
+    "schema_version": "signals-1.0",
+    "signals": {
+      "shot_cut_rate_per_min": 17.473,
+      "scene_count": 17,
+      "mean_motion_intensity": 0.2766,
+      "peak_motion_intensity": 0.3699,
+      "continuous_motion_window_ratio": 0.75,
+      "audio_mean_volume_db": -17.2,
+      "luminance_spike_ratio": 0.0175,
+      "duration_seconds": 58.375011,
+      "width": 1440,
+      "height": 2560,
+      "fps": 30.0
+    },
+    "notes": [],
+    "elapsed_seconds": 14.0
+  },
+  {
+    "video_path": "/Users/studyhard/alibaba/untitled folder/3ca8200-19f0e2c4f59-0005-9573-534-c9280.mp4",
+    "schema_version": "signals-1.0",
+    "signals": {
+      "shot_cut_rate_per_min": 26.603,
+      "scene_count": 46,
+      "mean_motion_intensity": 0.5026,
+      "peak_motion_intensity": 0.7309,
+      "continuous_motion_window_ratio": 0.75,
+      "audio_mean_volume_db": -13.6,
+      "luminance_spike_ratio": 0.0686,
+      "duration_seconds": 103.747007,
+      "width": 720,
+      "height": 1280,
+      "fps": 30.0
+    },
+    "notes": [],
+    "elapsed_seconds": 11.5
+  },
+  {
+    "video_path": "/Users/studyhard/alibaba/untitled folder/58920349-metadata_video_1080p_4f86acbd-c2a5-47ea-a8de-9e6dade5043f_refiner.mp4",
+    "schema_version": "signals-1.0",
+    "signals": {
+      "shot_cut_rate_per_min": 0.0,
+      "scene_count": 0,
+      "mean_motion_intensity": 0.3728,
+      "peak_motion_intensity": 0.4068,
+      "continuous_motion_window_ratio": 1.0,
+      "audio_mean_volume_db": -23.6,
+      "luminance_spike_ratio": 0.0,
+      "duration_seconds": 5.162667,
+      "width": 1920,
+      "height": 1080,
+      "fps": 24.0
+    },
+    "notes": [],
+    "elapsed_seconds": 0.8
+  }
+]
