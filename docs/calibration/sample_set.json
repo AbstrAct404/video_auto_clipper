@@ -20,7 +20,8 @@
       "drama_source": "创作者剧",
       "drama_type": "本土AI",
       "genre_guess": "奇幻喜剧（西游恶搞）",
-      "status": "local"
+      "status": "corrupt",
+      "note": "本地文件截断（moov atom not found）；OSS 源 key 已删除（NoSuchKey），无法重下"
     },
     {
       "file": "2918c23f-19f0e54a7f7-0005-9573-534-c9280.mp4",
@@ -110,7 +111,7 @@
       "drama_type": "本土AI",
       "genre_guess": "婚姻背叛/冷复仇",
       "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/5e90fd73-19f02c9e742-0005-9573-534-c9280.mp4",
-      "status": "downloading"
+      "status": "local"
     },
     {
       "file": "472875e-19eb778ef66-0005-9573-534-c9280.mp4",
@@ -120,7 +121,7 @@
       "drama_type": "译制剧",
       "genre_guess": "霸道总裁爱情（译制）",
       "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/472875e-19eb778ef66-0005-9573-534-c9280.mp4",
-      "status": "downloading"
+      "status": "local"
     },
     {
       "file": "56c5d599-19ef28dcfc4-0005-9573-534-c9280.mp4",
@@ -130,7 +131,7 @@
       "drama_type": "本土AI",
       "genre_guess": "荒岛爱情（飞行员与部落）",
       "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/56c5d599-19ef28dcfc4-0005-9573-534-c9280.mp4",
-      "status": "downloading"
+      "status": "local"
     },
     {
       "file": "41469f9d-19ef2574e46-0005-9573-534-c9280.mp4",
@@ -140,7 +141,7 @@
       "drama_type": "本土AI",
       "genre_guess": "隐藏千金复仇",
       "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/41469f9d-19ef2574e46-0005-9573-534-c9280.mp4",
-      "status": "downloading"
+      "status": "local"
     },
     {
       "file": "609b321a-19ef290cb97-0005-9573-534-c9280.mp4",
@@ -150,7 +151,7 @@
       "drama_type": "本土AI",
       "genre_guess": "平行世界/校园霸凌逆袭",
       "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/609b321a-19ef290cb97-0005-9573-534-c9280.mp4",
-      "status": "downloading"
+      "status": "local"
     },
     {
       "file": "325f6f4f-19ecb07c730-0005-9573-534-c9280.mp4",
@@ -160,7 +161,7 @@
       "drama_type": "本土AI",
       "genre_guess": "凤凰赏金猎人奇幻",
       "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/customerTrans/d995326d81e3d278bd712c5e075bc049/325f6f4f-19ecb07c730-0005-9573-534-c9280.mp4",
-      "status": "downloading"
+      "status": "local"
     },
     {
       "file": "2c9e5e5e-19f1cce8db0-0005-9573-534-c9280.mp4",
@@ -170,7 +171,7 @@
       "drama_type": "本土AI",
       "genre_guess": "亚特兰蒂斯史诗爱情",
       "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/2c9e5e5e-19f1cce8db0-0005-9573-534-c9280.mp4",
-      "status": "downloading"
+      "status": "local"
     },
     {
       "file": "65b019e3-19ed365d636-0005-9573-534-c9280.mp4",
@@ -180,7 +181,7 @@
       "drama_type": "译制剧",
       "genre_guess": "都市婚恋（真人译制，预期慢节奏对白）",
       "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/65b019e3-19ed365d636-0005-9573-534-c9280.mp4",
-      "status": "downloading"
+      "status": "local"
     },
     {
       "file": "6a0e4c5c-19eb75c5cd2-0005-9573-534-c9280.mp4",
@@ -190,7 +191,7 @@
       "drama_type": "译制剧",
       "genre_guess": "白蛇奇幻爱情（真人译制）",
       "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/6a0e4c5c-19eb75c5cd2-0005-9573-534-c9280.mp4",
-      "status": "downloading"
+      "status": "local"
     },
     {
       "file": "28bfe24-19eed410953-0005-9573-534-c9280.mp4",
@@ -200,7 +201,7 @@
       "drama_type": "国内AI",
       "genre_guess": "家庭轻喜剧",
       "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/customerTrans/d995326d81e3d278bd712c5e075bc049/28bfe24-19eed410953-0005-9573-534-c9280.mp4",
-      "status": "downloading"
+      "status": "local"
     },
     {
       "file": "3a1776f2-19f035cc8a6-0005-9573-534-c9280.mov",
@@ -210,7 +211,117 @@
       "drama_type": "本土剧",
       "genre_guess": "校园诱惑（真人本土剧，非 AI）",
       "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/3a1776f2-19f035cc8a6-0005-9573-534-c9280.mov",
-      "status": "downloading"
+      "status": "local"
+    },
+    {
+      "file": "d855eb8-19f1d552983-0005-9573-534-c9280.mp4",
+      "title": "Husband or Enemy?",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "译制剧",
+      "genre_guess": "悬疑复仇（易容替身阴谋）",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/d855eb8-19f1d552983-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "2b791d88-19f1d574396-0005-9573-534-c9280.mp4",
+      "title": "Husband From a Drunken Mistake",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "译制剧",
+      "genre_guess": "婚恋误会/同居爱情",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/2b791d88-19f1d574396-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "4cb25710-19f1d5d21bf-0005-9573-534-c9280.mp4",
+      "title": "Wait, My Ex-wife is a Big Shot?!",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "译制剧",
+      "genre_guess": "离婚后逆袭（隐藏名医前妻）",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/4cb25710-19f1d5d21bf-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "5b3ed041-19f1d6bf19e-0005-9573-534-c9280.mp4",
+      "title": "From Fish Stall to His Heart",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "译制剧",
+      "genre_guess": "市井单亲妈妈×豪门少爷",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/5b3ed041-19f1d6bf19e-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "1e38d1aa-19f21cabd2b-0005-9573-534-c9280.mp4",
+      "title": "Love Across 1000 Years",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "译制剧",
+      "genre_guess": "千年女帝转世/前世今生",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/1e38d1aa-19f21cabd2b-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "1882ae49-19f21e9528d-0005-9573-534-c9280.mp4",
+      "title": "The Billionaire's Double Life",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "译制剧",
+      "genre_guess": "隐藏千金+双重身份复仇",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/1882ae49-19f21e9528d-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "127638a1-19f21ece002-0005-9573-534-c9280.mp4",
+      "title": "Love at First Byte",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "译制剧",
+      "genre_guess": "外卖员×双面女总裁（线上恋人）",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/127638a1-19f21ece002-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "5076b84b-19f21fbcdb1-0005-9573-534-c9280.mp4",
+      "title": "Where Love Finds a Way",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "译制剧",
+      "genre_guess": "贫民窟单亲妈妈×逃婚男",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/5076b84b-19f21fbcdb1-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "45194b92-19f2244a3f5-0005-9573-534-c9280.mp4",
+      "title": "I Hate You, I Love You",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "译制剧",
+      "genre_guess": "恨爱纠葛/冤狱平反",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/45194b92-19f2244a3f5-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "2ef4ff57-19f224e5047-0005-9573-534-c9280.mp4",
+      "title": "You Got The Wrong Mother, Daddy!",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "译制剧",
+      "genre_guess": "夺子阴谋/育儿专家逆袭",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/2ef4ff57-19f224e5047-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "4af80ab6-19f225394f4-0005-9573-534-c9280.mp4",
+      "title": "Rich Because of Dad",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "译制剧",
+      "genre_guess": "破产总裁保安逆袭/赘婿",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/4af80ab6-19f225394f4-0005-9573-534-c9280.mp4",
+      "status": "local"
     }
   ]
 }
