@@ -6,10 +6,12 @@
 - **L0 信号层**：运动分析、closed-set 视觉分析、切镜/音频/亮度信号（ffmpeg/ffprobe/numpy，零 API 费用）；
 - **L1 规则卡求值**：YAML 规则书加载校验 + 信号匹配（`app/style_profiles.py`）；
 - **L2 移交计划**：决定哪些命中送云端 LLM 复核（`app/l2_referral.py`，只规划不调用）；
-- **L3 剪辑计划**：带分数窗口 → 15s 片段时间轴（`app/clip_planner.py`，ffmpeg 执行器待二期）；
+- **L3 剪辑计划与渲染**：带分数窗口 → 15s 片段时间轴（`app/clip_planner.py`，尾段短镜保护）+ ffmpeg 拼接执行器（`app/clip_executor.py`）；
 - **L4 合规门禁**：确定性 block/review/pass 查表（`app/gatekeeper.py`）；
 - **平台画像**：各大平台视频类型划分 + 判重规则（调研落地，`configs/platform_profiles.yaml`）；
-- **降重分析**：MD5 + 帧感知指纹 + 残留水印/黑边检测，对齐平台多级判重（`app/dedup.py`）。
+- **降重分析**：MD5 + 帧感知指纹 + 残留水印/黑边检测，对齐平台多级判重（`app/dedup.py`）；
+- **分镜捕捉与叙事剪辑**：切点分镜 + 风格→画面目标匹配 + 混剪模板重排，内置节奏守卫与相邻片段钩子链（`app/storyboard.py` + `app/narrative.py`）；
+- **成品自动命名**：爆款标题模板库确定性生成可发布标题（`app/titler.py`）。
 
 总体方案见 `docs/../docs/北斗智影新Agent调研与架构方向.md`；
 信号层设计见 [`docs/signal-layer-design.md`](docs/signal-layer-design.md)。
@@ -33,7 +35,7 @@ L1 规则卡求值（configs/style_profiles.yaml）──────► L4 合�
 L2 移交计划（always / ambiguous_multi_hit）
    │  referrals（只规划，云端 LLM 二期接入）
    ▼
-L3 剪辑计划（贪心挑窗 → 15s 片段时间轴，执行器二期）
+L3 剪辑计划（贪心挑窗 → 15s 片段时间轴）→ ffmpeg 渲染执行器（拼接成片）
 
 平台画像（configs/platform_profiles.yaml）
    ├── 统一类目 → 各平台分类映射（B 站官方 tid）
@@ -42,6 +44,42 @@ L3 剪辑计划（贪心挑窗 → 15s 片段时间轴，执行器二期）
 
 典型串联：`/v1/signals/compute` → `/v1/profiles/evaluate` →
 `/v1/gatekeeper/check` → `/v1/dedup/analyze` → `/v1/clip/plan`。
+
+## 功能清单与路线图
+
+### 已实现功能
+
+| 能力 | 入口 | 状态 |
+|---|---|---|
+| L0 信号层（切镜率/运动/音频/亮度） | `POST /v1/signals/compute` | ✅ 实测标定 v2 |
+| 窗口级运动分析（采样档 + 时序分类） | `POST /v1/analyze/motion` | ✅ |
+| closed-set 视觉分析（余弦排序 + margin 拒答） | `POST /v1/analyze/visual` | ✅ 默认 Fake provider，真实 SigLIP2 可选装 |
+| L1 规则卡求值 + L2 移交计划 | `POST /v1/profiles/evaluate` | ✅ 规则书 provisional |
+| L2 云端多模态复核（OpenAI-compatible） | `POST /v1/l2/review` | ✅ 可选启用（默认关） |
+| L3 剪辑计划（贪心挑窗 + 尾段短镜保护） | `POST /v1/clip/plan` | ✅ |
+| L3 渲染执行器（ffmpeg 拼接成片） | `POST /v1/clip/render` | ✅ 转场/音频融洽除外 |
+| L4 合规门禁（tagging 查表） | `POST /v1/gatekeeper/check` | ✅ |
+| 平台画像（分类映射 + 发布规格 + 判重规则） | `GET /v1/platforms` | ✅ 调研落地 |
+| 降重体检 + 相似度比对 | `POST /v1/dedup/analyze` / `compare` | ✅ 阈值 provisional |
+| 分镜捕捉（切点分镜 + 逐镜信号） | `POST /v1/storyboard/extract` | ✅ |
+| 叙事剪辑计划（目标匹配 + 混剪模板 + 节奏守卫 + 钩子链） | `POST /v1/narrative/plan` | ✅ 目标书 provisional |
+| 一键成片异步任务（cancel/retry/产物下载） | `POST /v1/jobs` 等 | ✅ |
+| 成品自动命名 + 标题预览 | `POST /v1/titles/preview` | ✅ 确定性生成 |
+| Chatbot Skill（SKILL.md + 零依赖调用脚本） | `skills/video-auto-clipper/` | ✅ 全流程实测跑通 |
+| Web 控制台 | `app/static/index.html` | ✅ 基础版 |
+
+### 计划内缺失任务（Roadmap）
+
+| 任务 | 说明 | 依据 |
+|---|---|---|
+| 转场与音频融洽 | L3 渲染仅硬切拼接，`transition_audio_blend` 未实现 | `plan_status()` |
+| 规则书正式标定 | provisional → calibrated 需 ≥30 支标注样本信号分布；日常/恋爱风格卡尚缺 | 加载器硬规则 |
+| 叙事目标书标定 | 恋爱（romance_intimacy）等语义目标本地像素信号常无命中，需标定或 L2 确认 | 实测 `no target matched` |
+| L2 云端接入常态化 | narrative_board 人物-行动/亲密动作语义标注依赖云端 LLM，当前仅 stub | `prompts/` |
+| L3 prefer 参与选窗重排 | 规则卡 `clip_strategy` 目前仅是解释口径，二期参与挑窗 | 技能约定 |
+| L3 锚点分散挑选 | 纯贪心在高分窗口聚集时成片重复堆砌，需跨度约束（当前靠叙事计划重排兜底） | 好评期复盘 |
+| 场景切点降宽解码 | 全片解码是当前耗时瓶颈 | 实测标定记录 |
+| 平台判重生产阈值 | 除 B 站外各平台无公开数值阈值，阈值待样本标定 | 降重调研 |
 
 ## 快速开始
 
@@ -226,9 +264,11 @@ fake 模式，生产置 `SMARTCLIP_VISUAL_FAKE=0`。
 ### L3 剪辑计划（`clip_planner.py`）
 
 计划与执行分离（计划可审计、可回放）：输入带分数的候选窗口（如窗口平均
-运动强度），**分数降序贪心挑窗 → 按时间排序合并相邻/重叠窗（分数取均值）
-→ 目标时长预算裁剪尾部**。输出 15s 成片的片段时间轴；真正的 ffmpeg 拼接、
-转场、音频融洽为二期执行器（响应附 `executor_status` 明示能力状态）。
+运动强度），**分数降序贪心挑窗 → 按时间排序合并相邻/重叠窗（分数取最高分）
+→ 目标时长预算裁剪尾部**。输出 15s 成片的片段时间轴；尾部裁剪剩余预算
+不足 `min_segment_seconds`（默认 1.0s）时直接丢弃，避免产出孤立短镜。
+ffmpeg 拼接由 `clip_executor.py` 执行（`/v1/clip/render`，一键成片已内置）；
+转场、音频融洽尚未实现（响应附 `executor_status` 明示能力状态）。
 
 ### L4 合规门禁（`gatekeeper.py`）
 
@@ -266,6 +306,11 @@ block > review > pass；未知维度/缺失标签忽略并记 notes，绝不因�
   contrast_open 对比开场（事件→转折），均带目标时长预算裁剪；
   `interleave` 做群像人物-行动交错（本地以时间段近似，人物/行动语义
   标注交 L2 `prompts/narrative_board.md` 确认）；
+- **节奏守卫**（`rhythm` 配置块）：单镜头/片段最短 1.0s；两个中长片段间
+  夹 <1s 的孤立短镜自动并入相邻原片片段，无法并入则剔除；连续 ≥2 个
+  短片段构成的快闪串（原片快闪或模型生成快闪段落）允许保留；
+- **钩子链**：相邻片段按原片时间邻近 + 共享画面目标 + 运动强度相似
+  三维关联度排序衔接，形成有效钩子而非按分数机械拼接；
 - 混剪片段保持各自在原片内的完整、同一镜头不重复使用；目标配置加载
   失败仅叙事路由降级 503，不影响其余能力。
 
@@ -336,7 +381,7 @@ block > review > pass；未知维度/缺失标签忽略并记 notes，绝不因�
 ## 测试
 
 ```bash
-python3 -m pytest          # 115 个用例：纯逻辑 + TestClient 端到端（需 ffmpeg）
+python3 -m pytest          # 134 个用例：纯逻辑 + TestClient 端到端（需 ffmpeg）
 ```
 
 - 端到端 fixture：`tests/conftest.py` 用 ffmpeg 生成确定性 4s 小视频
