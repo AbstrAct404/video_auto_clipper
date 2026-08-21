@@ -58,6 +58,17 @@ def test_budget_clips_tail():
     assert segments[-1]["end_seconds"] == pytest.approx(35.0)
 
 
+def test_tail_clip_drops_short_remainder():
+    # 10s 片段占满预算后仅剩 0.5s，不足以构成独立片段 → 丢弃而非产生 <1s 短镜
+    windows = [
+        ScoredWindow(start_seconds=0.0, duration_seconds=10.0, score=0.9),
+        ScoredWindow(start_seconds=30.0, duration_seconds=10.0, score=0.8),
+    ]
+    segments = select_segments(windows, target_duration_seconds=10.5)
+    assert len(segments) == 1
+    assert segments[0]["end_seconds"] == pytest.approx(10.0)
+
+
 def test_short_windows_filtered_by_min_segment():
     windows = [
         ScoredWindow(start_seconds=0.0, duration_seconds=0.5, score=0.99),

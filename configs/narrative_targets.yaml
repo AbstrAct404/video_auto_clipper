@@ -95,6 +95,15 @@ templates:
     strategy: contrast_open
 
 # 人物-行动交错（群像剪辑：宙斯->放闪电，切 jimmy->教扫码，再切下一位）
+# 节奏守卫（成片镜头时长约束）
+rhythm:
+  min_shot_seconds: 1.0    # 单镜头/片段最短时长
+  # 孤立短镜：两个中长片段之间夹一个 <min_shot_seconds 的短片段 → 不允许，
+  #   优先并入原片相邻片段，否则剔除；
+  # 快闪串：连续 >=2 个短片段（原片快闪或模型生成的快闪段落）→ 允许保留
+  allow_flash_runs: true
+  flash_run_min_count: 2
+
 interleave:
   enabled: true
   max_pairs: 3           # 一期最多交错 3 组人物-行动

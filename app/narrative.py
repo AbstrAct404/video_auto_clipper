@@ -72,12 +72,24 @@ class InterleaveConfig:
 
 
 @dataclass(frozen=True)
+class RhythmConfig:
+    min_shot_seconds: float
+    allow_flash_runs: bool
+    flash_run_min_count: int
+
+
+@dataclass(frozen=True)
 class NarrativeTargetBook:
     schema_version: str
     calibration_status: str
     targets: tuple[NarrativeTarget, ...]
     templates: tuple[NarrativeTemplate, ...]
     interleave: InterleaveConfig
+    rhythm: RhythmConfig = field(
+        default_factory=lambda: RhythmConfig(
+            min_shot_seconds=1.0, allow_flash_runs=True, flash_run_min_count=2
+        )
+    )
     source_path: str | None = None
 
 
@@ -207,12 +219,25 @@ def load_narrative_targets(path: str | Path) -> NarrativeTargetBook:
         max_pairs=int(inter_raw.get("max_pairs", 3)),
         min_pair_seconds=float(inter_raw.get("min_pair_seconds", 1.0)),
     )
+    rhythm_raw = raw.get("rhythm") or {}
+    min_shot = float(rhythm_raw.get("min_shot_seconds", 1.0))
+    if min_shot < 0:
+        raise _fail("rhythm.min_shot_seconds must be >= 0")
+    flash_count = int(rhythm_raw.get("flash_run_min_count", 2))
+    if flash_count < 2:
+        raise _fail("rhythm.flash_run_min_count must be >= 2")
+    rhythm = RhythmConfig(
+        min_shot_seconds=min_shot,
+        allow_flash_runs=bool(rhythm_raw.get("allow_flash_runs", True)),
+        flash_run_min_count=flash_count,
+    )
     return NarrativeTargetBook(
         schema_version=raw["schema_version"],
         calibration_status=status,
         targets=targets,
         templates=tuple(templates),
         interleave=interleave,
+        rhythm=rhythm,
         source_path=str(source),
     )
 
@@ -331,6 +356,111 @@ def _to_segment(match: TargetMatch, role: str) -> dict[str, Any]:
     }
 
 
+def _relatedness(last: TargetMatch, candidate: TargetMatch) -> float:
+    """相邻片段语义关联的本地近似：原片邻近（同场景）+ 目标重叠 + 强度相似。"""
+    if candidate.start_seconds >= last.end_seconds:
+        gap = candidate.start_seconds - last.end_seconds
+    elif last.start_seconds >= candidate.end_seconds:
+        gap = last.start_seconds - candidate.end_seconds
+    else:
+        gap = 0.0
+    proximity = max(0.0, 1.0 - gap / 10.0)
+    shared = 0.5 if last.target_id == candidate.target_id else 0.0
+    top = max(last.score, candidate.score, 1e-6)
+    similarity = 0.25 * max(0.0, 1.0 - abs(last.score - candidate.score) / top)
+    return proximity + shared + similarity
+
+
+def _hook_chain(opener: TargetMatch, rest: list[TargetMatch]) -> list[TargetMatch]:
+    """钩子关联链：每步从剩余片段挑与上一片段关联度最高者（替代纯按时间补位），
+    使相邻片段在原片上邻近或信号相近，形成有效钩子；精确语义需 L2 确认。"""
+    remaining = list(rest)
+    chained = [opener]
+    while remaining:
+        remaining.sort(key=lambda item: (-_relatedness(chained[-1], item), -item.score))
+        chained.append(remaining.pop(0))
+    return chained
+
+
+def _merge_segment(into: dict[str, Any], extra: dict[str, Any]) -> dict[str, Any]:
+    return {
+        **into,
+        "start_seconds": min(into["start_seconds"], extra["start_seconds"]),
+        "end_seconds": max(into["end_seconds"], extra["end_seconds"]),
+        "shot_indexes": sorted(set(into["shot_indexes"]) | set(extra["shot_indexes"])),
+        "target_ids": sorted(set(into["target_ids"]) | set(extra["target_ids"])),
+        "score": max(into["score"], extra["score"]),
+    }
+
+
+def _contiguous(a: dict[str, Any], b: dict[str, Any]) -> bool:
+    return (
+        abs(a["start_seconds"] - b["end_seconds"]) < 0.05
+        or abs(b["start_seconds"] - a["end_seconds"]) < 0.05
+    )
+
+
+def _apply_rhythm_guard(
+    segments: list[dict[str, Any]], rhythm: RhythmConfig
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """节奏守卫（成片镜头时长约束）。
+
+    禁止：两个中长片段中间夹一个 <min_shot_seconds 的孤立短片段；
+    允许：连续 >=flash_run_min_count 个短片段（原片快闪 / 模型生成快闪段）。
+    孤立短片段优先并入原片上与之相邻的片段，否则剔除。返回 (segments, notes)。
+    """
+    notes: list[str] = []
+    minimum = rhythm.min_shot_seconds
+
+    def is_short(segment: dict[str, Any]) -> bool:
+        return segment["end_seconds"] - segment["start_seconds"] < minimum
+
+    # 识别连续短片段串：长度达标视为快闪串整体保留
+    runs: list[tuple[int, int]] = []
+    index = 0
+    while index < len(segments):
+        if is_short(segments[index]):
+            start = index
+            while index < len(segments) and is_short(segments[index]):
+                index += 1
+            runs.append((start, index))
+        else:
+            index += 1
+    flash_limit = rhythm.flash_run_min_count if rhythm.allow_flash_runs else 10**9
+    keep: set[int] = set()
+    for start, end in runs:
+        if end - start >= flash_limit:
+            keep.update(range(start, end))
+
+    result: list[dict[str, Any]] = []
+    pending: dict[str, Any] | None = None
+    dropped = 0
+    for index, segment in enumerate(segments):
+        if pending is not None:
+            segment = _merge_segment(segment, pending)
+            pending = None
+        if not is_short(segment) or index in keep:
+            result.append(segment)
+            continue
+        prev_seg = result[-1] if result else None
+        next_seg = segments[index + 1] if index + 1 < len(segments) else None
+        # 只与原片上真正相邻的片段合并；跨空洞合并会引入未选画面，宁可剔除
+        if prev_seg is not None and _contiguous(prev_seg, segment):
+            result[-1] = _merge_segment(prev_seg, segment)
+        elif next_seg is not None and _contiguous(segment, next_seg):
+            pending = segment
+        else:
+            dropped += 1
+    if pending is not None:
+        dropped += 1
+    if dropped:
+        notes.append(
+            f"rhythm guard dropped {dropped} isolated short segment(s) (<{minimum}s); "
+            "flash runs of consecutive shorts are kept"
+        )
+    return result, notes
+
+
 def plan_narrative(
     book: NarrativeTargetBook,
     matches: list[TargetMatch],
@@ -369,32 +499,27 @@ def plan_narrative(
         ordered = sorted(merged.values(), key=lambda item: item.start_seconds)
     elif template.strategy == "peak_first":
         best = max(merged.values(), key=lambda item: item.score)
-        rest = sorted(
-            (item for item in merged.values() if item is not best),
-            key=lambda item: item.start_seconds,
+        rest = [item for item in merged.values() if item is not best]
+        ordered = _hook_chain(best, rest)
+        notes.append(
+            "hook chain orders segments by local relatedness (source proximity + shared targets); "
+            "precise scene/character semantics require L2 narrative_board review"
         )
-        ordered = [best, *rest]
     else:  # contrast_open
         pairs = [item for item in merged.values() if item.kind == "pair"]
         opener = max(pairs, key=lambda item: item.score) if pairs else None
         if opener is None:
             notes.append("contrast_open requested but no pair matched; fell back to peak_first")
             best = max(merged.values(), key=lambda item: item.score)
-            rest = sorted(
-                (item for item in merged.values() if item is not best),
-                key=lambda item: item.start_seconds,
-            )
-            ordered = [best, *rest]
+            rest = [item for item in merged.values() if item is not best]
+            ordered = _hook_chain(best, rest)
         else:
-            rest = sorted(
-                (
-                    item
-                    for item in merged.values()
-                    if item is not opener and item.start_seconds >= opener.end_seconds
-                ),
-                key=lambda item: item.start_seconds,
-            )
-            ordered = [opener, *rest]
+            rest = [
+                item
+                for item in merged.values()
+                if item is not opener and item.start_seconds >= opener.end_seconds
+            ]
+            ordered = _hook_chain(opener, rest)
 
     if interleave:
         if not book.interleave.enabled:
@@ -435,4 +560,6 @@ def plan_narrative(
     planned = _trim_budget(segments, target_duration_seconds)
     if len(planned) < len(segments):
         notes.append("timeline truncated to target duration")
+    planned, rhythm_notes = _apply_rhythm_guard(planned, book.rhythm)
+    notes.extend(rhythm_notes)
     return planned, notes

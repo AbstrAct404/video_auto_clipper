@@ -322,6 +322,76 @@
       "genre_guess": "破产总裁保安逆袭/赘婿",
       "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/4af80ab6-19f225394f4-0005-9573-534-c9280.mp4",
       "status": "local"
+    },
+    {
+      "file": "8244399-19e63455ad7-0005-9573-534-c9280.mp4",
+      "title": "The Coastal War: Plant Kingdom vs. Sea King",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "本土AI",
+      "genre_guess": "奇幻战争（植物王国vs海王）",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/customerTrans/d995326d81e3d278bd712c5e075bc049/8244399-19e63455ad7-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "1ea10326-19f21cab959-0005-9573-534-c9280.mp4",
+      "title": "Love Across 1000 Years",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "译制剧",
+      "genre_guess": "穿越千年恋爱",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/1ea10326-19f21cab959-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "2b21dd05-19f22538e89-0005-9573-534-c9280.mp4",
+      "title": "Rich Because of Dad",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "译制剧",
+      "genre_guess": "家庭逆袭",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/2b21dd05-19f22538e89-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "688d5932-19eed41e868-0005-9573-534-c9280.mp4",
+      "title": "No Divorce, No Separate Rooms! A Mother's...",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "国内AI",
+      "genre_guess": "家庭婚姻",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/customerTrans/d995326d81e3d278bd712c5e075bc049/688d5932-19eed41e868-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "9852581-19f21e9522f-0005-9573-534-c9280.mp4",
+      "title": "The Billionaire's Double Life",
+      "quality_label": "高质量",
+      "drama_source": "引入剧",
+      "drama_type": "译制剧",
+      "genre_guess": "富豪双面悬疑",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/9852581-19f21e9522f-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "573b36b6-19ef28f5bc4-0005-9573-534-c9280.mp4",
+      "title": "Mystery Plateau: Redemption",
+      "quality_label": "差质量",
+      "drama_source": "引入剧",
+      "drama_type": "本土AI",
+      "genre_guess": "悬疑救赎",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/573b36b6-19ef28f5bc4-0005-9573-534-c9280.mp4",
+      "status": "local"
+    },
+    {
+      "file": "1d8d846f-19eb778e70e-0005-9573-534-c9280.mp4",
+      "title": "One Wild Night: Mr. Ye's Obsessive Love",
+      "quality_label": "差质量",
+      "drama_source": "引入剧",
+      "drama_type": "译制剧",
+      "genre_guess": "霸总痴恋",
+      "oss_url": "https://outin-c6b1636ee48611f0bf9400163e01d238.oss-us-west-1.aliyuncs.com/original/workflow/1d8d846f-19eb778e70e-0005-9573-534-c9280.mp4",
+      "status": "local"
     }
   ]
 }

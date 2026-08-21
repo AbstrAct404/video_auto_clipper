@@ -81,7 +81,9 @@ def select_segments(
             timeline.append(
                 {"start_seconds": window.start_seconds, "end_seconds": end, "score": window.score}
             )
-    # 裁掉超出目标时长的尾部（保持片段起点不变，截断最后一个片段）
+    # 裁掉超出目标时长的尾部（保持片段起点不变，截断最后一个片段）；
+    # 截断后剩余不足 min_segment_seconds 的尾段直接丢弃，避免在中长片段后
+    # 挂一个 <1s 的孤立短镜（节奏守卫与 narrative 层保持一致）。
     budget = target_duration_seconds
     clipped: list[dict[str, float]] = []
     for segment in timeline:
@@ -89,6 +91,8 @@ def select_segments(
         if budget <= 0:
             break
         if length > budget:
+            if budget < min_segment_seconds:
+                break
             segment = {**segment, "end_seconds": round(segment["start_seconds"] + budget, 3)}
             length = budget
         clipped.append(segment)

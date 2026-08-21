@@ -11,6 +11,9 @@ from app.config import Settings
 from app.main import create_app
 from app.narrative import (
     InterleaveConfig,
+    RhythmConfig,
+    TargetMatch,
+    _apply_rhythm_guard,
     NarrativeConfigError,
     NarrativeTarget,
     NarrativeTargetBook,
@@ -377,3 +380,135 @@ def test_storyboard_extract_bad_path(client):
         "/v1/storyboard/extract", json={"video_path": "/nonexistent/video.mp4"}
     )
     assert response.status_code == 404
+
+# ---------- 节奏守卫（镜头时长约束） ----------
+
+
+def _segment(start: float, end: float, score: float = 0.5, shot: int = 0) -> dict:
+    return {
+        "start_seconds": start,
+        "end_seconds": end,
+        "shot_indexes": [shot],
+        "target_ids": ["battle_effects"],
+        "score": score,
+        "role": "body",
+    }
+
+
+RHYTHM = RhythmConfig(min_shot_seconds=1.0, allow_flash_runs=True, flash_run_min_count=2)
+
+
+def test_rhythm_guard_drops_isolated_short_between_long():
+    segments = [
+        _segment(0.0, 3.0),
+        _segment(10.0, 10.6, shot=1),   # 孤立短镜（与两侧都不相邻）
+        _segment(20.0, 25.0, shot=2),
+    ]
+    guarded, notes = _apply_rhythm_guard(segments, RHYTHM)
+    assert [seg["start_seconds"] for seg in guarded] == [0.0, 20.0]
+    assert any("rhythm guard dropped 1" in note for note in notes)
+
+
+def test_rhythm_guard_merges_contiguous_short_into_neighbor():
+    segments = [
+        _segment(0.0, 3.0),
+        _segment(3.0, 3.6, shot=1),   # 与原片相邻 → 并入前段而非剔除
+        _segment(20.0, 25.0, shot=2),
+    ]
+    guarded, notes = _apply_rhythm_guard(segments, RHYTHM)
+    assert len(guarded) == 2
+    assert guarded[0]["end_seconds"] == 3.6
+    assert guarded[0]["shot_indexes"] == [0, 1]
+    assert notes == []
+
+
+def test_rhythm_guard_keeps_flash_run_of_shorts():
+    # 连续 3 个短片段 = 快闪串（原片快闪/生成快闪），整体保留
+    segments = [
+        _segment(0.0, 3.0),
+        _segment(5.0, 5.4, shot=1),
+        _segment(5.4, 5.8, shot=2),
+        _segment(5.8, 6.1, shot=3),
+        _segment(20.0, 25.0, shot=4),
+    ]
+    guarded, notes = _apply_rhythm_guard(segments, RHYTHM)
+    assert len(guarded) == 5
+    assert notes == []
+
+
+def test_rhythm_guard_single_short_run_is_not_flash():
+    # 单独一个短片段夹在中长之间（即使与一侧相邻）→ 并入而非保留
+    segments = [
+        _segment(0.0, 3.0),
+        _segment(5.0, 5.4, shot=1),   # 与前段不相邻、与后段相邻
+        _segment(5.4, 9.0, shot=2),
+    ]
+    guarded, notes = _apply_rhythm_guard(segments, RHYTHM)
+    assert len(guarded) == 2
+    assert guarded[1]["start_seconds"] == 5.0
+    assert guarded[1]["end_seconds"] == 9.0
+
+
+# ---------- 钩子关联链 ----------
+
+
+def _match(target_id: str, start: float, end: float, score: float, shots=(0,)) -> TargetMatch:
+    return TargetMatch(
+        target_id=target_id,
+        kind="shot",
+        shot_indexes=shots,
+        start_seconds=start,
+        end_seconds=end,
+        score=score,
+    )
+
+
+def test_hook_chain_prefers_source_adjacent_segment():
+    book = make_book()
+    matches = [
+        _match("battle_effects", 50.0, 55.0, 1.0, shots=(10,)),   # 最高分开场
+        _match("battle_effects", 5.0, 8.0, 0.8, shots=(2,)),      # 时间上更靠前
+        _match("battle_effects", 55.0, 58.0, 0.6, shots=(11,)),   # 原片上与开场相邻
+    ]
+    segments, notes = plan_narrative(book, matches, "hook_first", target_duration_seconds=60)
+    starts = [seg["start_seconds"] for seg in segments]
+    assert starts[0] == 50.0
+    assert starts[1] == 55.0  # 关联链选原片相邻片段，而非按时间回到 5s
+    assert any("hook chain" in note for note in notes)
+
+
+def test_loader_rejects_bad_flash_run_count(tmp_path):
+    # 直接构造最小非法配置
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(
+        """schema_version: narrative-targets-1.0
+calibration:
+  status: provisional
+targets:
+  - id: battle_effects
+    styles: [ran_xiang]
+    conditions:
+      - {signal: mean_motion_intensity, op: gte, value: 0.3}
+templates:
+  - id: linear
+    strategy: chronological
+rhythm:
+  flash_run_min_count: 1
+""",
+        encoding="utf-8",
+    )
+    with pytest.raises(NarrativeConfigError):
+        load_narrative_targets(bad)
+
+
+def test_plan_applies_rhythm_guard_end_to_end():
+    book = make_book()
+    matches = [
+        _match("battle_effects", 0.0, 4.0, 0.9, shots=(0,)),
+        _match("group_action", 30.0, 30.5, 0.8, shots=(5,)),  # 孤立短镜
+        _match("group_action", 40.0, 45.0, 0.7, shots=(6,)),
+    ]
+    segments, notes = plan_narrative(book, matches, "hook_first", target_duration_seconds=60)
+    for seg in segments:
+        assert seg["end_seconds"] - seg["start_seconds"] >= 1.0
+    assert any("rhythm guard" in note for note in notes)
